@@ -1,0 +1,1040 @@
+* {
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body, html, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+.app {
+  min-height: 100vh;
+  background: #f3f4f6;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  background: #111827;
+  color: white;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.topbar button {
+  margin-left: 0.5rem;
+}
+
+.username {
+  margin-right: 0.5rem;
+  opacity: 0.8;
+}
+
+.content {
+  padding: 1rem;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.card {
+  background: white;
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  margin-bottom: 1rem;
+}
+
+.narrow {
+  max-width: 400px;
+  width: 100%;
+}
+
+.app > .card,
+.app > .narrow {
+  margin: auto;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+input, select {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  margin-top: 0.25rem;
+  border-radius: 0.4rem;
+  border: 1px solid #d1d5db;
+}
+
+button {
+  border-radius: 0.5rem;
+  border: none;
+  padding: 0.45rem 0.8rem;
+  background: #111827;
+  color: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+button.link {
+  background: none;
+  color: #111827;
+  padding: 0;
+  margin-bottom: 0.5rem;
+}
+
+.role-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tabs button {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.tabs button.active {
+  background: #111827;
+  color: white;
+}
+
+.employee-list-card {
+  max-width: 1020px;
+}
+
+.employee-list-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.employee-list-head h2 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #2f2f2f;
+}
+
+.register-employee-action {
+  background: #b8d6a5;
+  color: #2f3e2f;
+  border: 1px solid #7f9a70;
+  border-radius: 0.45rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.employee-showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.85rem 0.95rem;
+}
+
+.employee-showcase-item {
+  display: grid;
+  justify-items: center;
+}
+
+.employee-card-frame {
+  width: 120px;
+  height: 120px;
+  border: 2px solid #959595;
+  background: #ededed;
+  position: relative;
+  display: grid;
+  grid-template-rows: 40px 35px 1fr;
+}
+
+.employee-card-top {
+  border-bottom: 1px solid #8a8a8a;
+  background: #d8d8d8;
+}
+
+.employee-card-avatar-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: -20px;
+}
+
+.employee-showcase-avatar {
+  width: 38px;
+  height: 38px;
+  border: 2px solid #333;
+  background: #1f2937;
+  font-size: 1rem;
+}
+
+.employee-card-lines {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 0.15rem;
+  padding-bottom: 0.45rem;
+}
+
+.employee-line {
+  width: 72px;
+  text-align: center;
+  font-size: 0.72rem;
+  color: #636363;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.employee-line.small {
+  font-size: 0.66rem;
+}
+
+.employee-showcase-name {
+  margin-top: 0.35rem;
+  width: 120px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #3f3f3f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.employee-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.employee-card {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.6rem;
+  border-radius: 0.6rem;
+  border: 1px solid #e5e7eb;
+  align-items: center;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: #111827;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  overflow: hidden;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.emp-name {
+  font-weight: 600;
+}
+
+.emp-meta {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.form-grid button[type="submit"] {
+  grid-column: 1 / -1;
+  justify-self: flex-start;
+}
+
+.register-card {
+  max-width: 980px;
+}
+
+.register-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.register-header h2 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.register-brand {
+  text-align: right;
+  font-size: 0.8rem;
+  color: #374151;
+}
+
+.brand-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.brand-subtitle {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+}
+
+.register-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 1.4fr) minmax(180px, 0.9fr) 130px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.register-fields {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.field-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+  margin-bottom: 0.2rem;
+}
+
+.field-head.simple {
+  margin-bottom: 0.35rem;
+}
+
+.field-required {
+  font-size: 0.82rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.register-side select {
+  min-height: 2.4rem;
+}
+
+.register-photo {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 0.45rem;
+}
+
+.upload-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.upload-box {
+  width: 90px;
+  height: 90px;
+  border: 2px solid #6b7280;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.upload-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-placeholder {
+  font-size: 1.5rem;
+  color: #6b7280;
+  line-height: 1;
+}
+
+.submit-register {
+  background: #f3f4f6;
+  color: #111827;
+  border: 1px solid #9ca3af;
+  padding: 0.3rem 0.8rem;
+}
+
+.job-card {
+  max-width: 1020px;
+}
+
+.job-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.job-header h2 {
+  margin: 0;
+  font-size: 2rem;
+  color: #2f2f2f;
+}
+
+.job-brand {
+  text-align: right;
+  color: #3f3f3f;
+}
+
+.job-assign-control {
+  max-width: 230px;
+  margin-bottom: 0.75rem;
+}
+
+.job-grid {
+  display: grid;
+  grid-template-columns: 150px repeat(7, minmax(95px, 1fr));
+  border: 1px solid #cfcfcf;
+  background: #fff;
+}
+
+.job-corner,
+.job-day-header,
+.job-shift-label,
+.job-cell {
+  min-height: 56px;
+  border-right: 1px solid #d4d4d4;
+  border-bottom: 1px solid #d4d4d4;
+}
+
+.job-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #5b5b5b;
+  background: #f8f8f8;
+}
+
+.job-shift-label {
+  display: flex;
+  align-items: center;
+  padding: 0 0.9rem;
+  font-size: 1.85rem;
+  font-weight: 500;
+  color: #3f3f3f;
+  background: #f8f8f8;
+}
+
+.job-cell {
+  border: none;
+  border-right: 1px solid #d4d4d4;
+  border-bottom: 1px solid #d4d4d4;
+  border-radius: 0;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem;
+}
+
+.job-cell:hover {
+  opacity: 1;
+  background: #f9fafb;
+}
+
+.job-chip {
+  width: 95%;
+  border: 2px solid #90a4b7;
+  border-radius: 0.55rem;
+  padding: 0.2rem 0.35rem;
+  text-align: left;
+  color: #2f2f2f;
+  line-height: 1.1;
+}
+
+.job-chip-check {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #6c9d59;
+  color: #fff;
+  border: 1px solid #3f6f30;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.job-chip-time {
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.job-chip-name {
+  font-size: 0.66rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.job-chip {
+  position: relative;
+}
+
+.job-available {
+  color: #8a8a8a;
+  font-size: 0.95rem;
+}
+
+.work-card {
+  max-width: 1020px;
+}
+
+.work-title {
+  margin: 0 0 0.8rem 0;
+  font-size: 2rem;
+  color: #2f2f2f;
+}
+
+.work-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.work-control-today,
+.work-control-week,
+.work-range-btn,
+.work-range-label {
+  min-height: 36px;
+  border: 2px solid #a6a6a6;
+  border-radius: 0.6rem;
+  background: #fff;
+  color: #4a4a4a;
+  font-size: 1rem;
+}
+
+.work-control-today {
+  color: #69a3df;
+  border-color: #8fb8e0;
+  background: #f3f9ff;
+}
+
+.work-control-week {
+  width: 96px;
+  margin: 0;
+  padding: 0 0.75rem;
+}
+
+.work-range-btn {
+  width: 42px;
+  padding: 0;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.work-range-label {
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.65rem;
+}
+
+.work-date-picker {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.work-grid {
+  display: grid;
+  grid-template-columns: 220px repeat(7, minmax(104px, 1fr));
+  border: 1px solid #cecece;
+  background: #fff;
+}
+
+.work-header-empty,
+.work-day-header,
+.work-employee-name,
+.work-cell,
+.work-sick-leave {
+  min-height: 78px;
+  border-right: 1px solid #d4d4d4;
+  border-bottom: 1px solid #d4d4d4;
+}
+
+.work-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5a5a5a;
+  font-size: 1rem;
+  font-weight: 600;
+  background: #f8f8f8;
+}
+
+.work-employee-name {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0 1rem;
+  font-size: 2rem;
+  font-weight: 500;
+  color: #3d3d3d;
+  background: #fcfcfc;
+}
+
+.work-user-icon {
+  font-size: 1.8rem;
+  color: #4a4a4a;
+}
+
+.work-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+}
+
+.work-available {
+  color: #9a9a9a;
+  font-size: 1.1rem;
+}
+
+.work-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-width: 98px;
+  min-height: 58px;
+  border-radius: 0.55rem;
+  border: 2px solid #777;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.9rem;
+  line-height: 1.15;
+}
+
+.work-tag.prefer {
+  background: #a9d59a;
+  border-color: #739f6b;
+  color: #2d5727;
+}
+
+.work-tag.unavailable {
+  background: #eab2b2;
+  border-color: #b57c7c;
+  color: #a23a3a;
+}
+
+.work-sick-leave {
+  grid-column: 2 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #808080;
+  font-size: 2rem;
+}
+
+.work-helper-note {
+  margin-top: 0.6rem;
+  color: #7a7a7a;
+  font-size: 0.9rem;
+}
+
+.replacement-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(23, 23, 23, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1rem;
+}
+
+.replacement-modal {
+  width: min(520px, 100%);
+  background: #fff;
+  border-radius: 0.6rem;
+  border: 1px solid #b8b8b8;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.25);
+  padding: 1.2rem 1.4rem;
+}
+
+.replacement-people-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.3rem;
+}
+
+.replacement-person {
+  display: grid;
+  justify-items: center;
+  gap: 0.3rem;
+}
+
+.replacement-avatar {
+  width: 62px;
+  height: 62px;
+  border-radius: 999px;
+  border: 4px solid #5f5f5f;
+  color: #5f5f5f;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.45rem;
+}
+
+.replacement-name {
+  font-size: 2rem;
+  color: #4a4a4a;
+}
+
+.replacement-arrow {
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  border: 2px solid #5ea1ff;
+  color: #5ea1ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+}
+
+.replacement-title {
+  text-align: center;
+  margin-top: 0.2rem;
+  font-size: 2.6rem;
+  color: #4f94ed;
+  font-weight: 700;
+}
+
+.replacement-subtitle {
+  text-align: center;
+  font-size: 1.8rem;
+  color: #616161;
+  margin-bottom: 0.8rem;
+}
+
+.replacement-actions {
+  border-top: 1px solid #d6d6d6;
+  margin-top: 0.6rem;
+  padding-top: 1rem;
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+}
+
+.replacement-decline,
+.replacement-accept {
+  min-width: 92px;
+  padding: 0.35rem 0.9rem;
+  border-radius: 0.5rem;
+  font-size: 1.25rem;
+}
+
+.replacement-decline {
+  background: #e45858;
+}
+
+.replacement-accept {
+  background: #60a1f3;
+}
+
+.replacement-accept:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.schedule-grid {
+  display: grid;
+  grid-template-columns: 80px repeat(3, 1fr);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  margin-top: 0.75rem;
+}
+
+.schedule-header {
+  background: #f3f4f6;
+  padding: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.schedule-day {
+  background: #f9fafb;
+  padding: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.schedule-cell {
+  padding: 0.4rem;
+  font-size: 0.8rem;
+  text-align: center;
+  border-left: 1px solid #e5e7eb;
+  border-top: 1px solid #e5e7eb;
+}
+
+.schedule-cell.clickable {
+  cursor: pointer;
+}
+
+.employee-schedule-row {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.employee-schedule-shifts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.employee-day {
+  min-width: 80px;
+}
+
+.day-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.day-shifts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.pill {
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+}
+
+.day-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.75rem 0;
+}
+
+.day-selector button {
+  background: #e5e7eb;
+  color: #111827;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+.day-selector button.active {
+  background: #111827;
+  color: white;
+}
+
+.shift-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.shift-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+}
+
+.shift-label {
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+.availability-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+button.success {
+  background: #16a34a;
+}
+
+button.danger {
+  background: #dc2626;
+}
+
+button.success.active,
+button.danger.active {
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 768px) {
+  .content {
+    padding: 0.75rem;
+  }
+
+  .schedule-grid {
+    font-size: 0.75rem;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .register-layout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .register-photo {
+    justify-items: start;
+  }
+
+  .register-header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .register-brand {
+    text-align: left;
+  }
+
+  .job-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+
+  .job-brand {
+    text-align: left;
+  }
+
+  .job-grid {
+    grid-template-columns: 120px repeat(7, minmax(78px, 1fr));
+  }
+
+  .job-day-header {
+    font-size: 0.78rem;
+  }
+
+  .job-shift-label {
+    font-size: 1rem;
+    padding: 0 0.5rem;
+  }
+
+  .job-chip-name,
+  .job-chip-time {
+    font-size: 0.56rem;
+  }
+
+  .replacement-name {
+    font-size: 1.3rem;
+  }
+
+  .replacement-title {
+    font-size: 2rem;
+  }
+
+  .replacement-subtitle {
+    font-size: 1.2rem;
+  }
+
+  .replacement-actions {
+    gap: 1rem;
+  }
+
+  .job-available {
+    font-size: 0.72rem;
+  }
+
+  .work-controls {
+    flex-wrap: wrap;
+  }
+
+  .work-grid {
+    grid-template-columns: 170px repeat(7, minmax(84px, 1fr));
+  }
+
+  .work-day-header {
+    font-size: 0.82rem;
+  }
+
+  .work-employee-name {
+    font-size: 1.2rem;
+    padding: 0 0.5rem;
+  }
+
+  .work-user-icon {
+    font-size: 1.2rem;
+  }
+
+  .work-available {
+    font-size: 0.78rem;
+  }
+
+  .work-tag {
+    min-width: 72px;
+    min-height: 44px;
+    font-size: 0.68rem;
+    padding: 0.25rem;
+  }
+
+  .work-sick-leave {
+    font-size: 1.1rem;
+  }
+
+  .employee-list-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .employee-list-head h2 {
+    font-size: 1.5rem;
+  }
+
+  .employee-showcase-grid {
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  }
+}
