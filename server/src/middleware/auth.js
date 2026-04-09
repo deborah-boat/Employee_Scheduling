@@ -1,5 +1,13 @@
 const jwt = require("jsonwebtoken");
 
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET environment variable is not set");
+  }
+  return secret;
+}
+
 function authenticate(req, res, next) {
   const authHeader = req.headers["authorization"];
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -7,7 +15,7 @@ function authenticate(req, res, next) {
   }
   const token = authHeader.slice(7);
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "changeme");
+    const decoded = jwt.verify(token, getJwtSecret());
     req.user = decoded;
     next();
   } catch {

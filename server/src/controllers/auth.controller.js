@@ -30,7 +30,7 @@ function login(req, res) {
       employeeId: user.employee_id || null
     };
 
-    const token = jwt.sign(payload, process.env.JWT_SECRET || "changeme", { expiresIn: "7d" });
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
 
     return res.json({
       token,
