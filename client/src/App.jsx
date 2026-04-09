@@ -11,6 +11,12 @@ export default function App() {
   const [employees, setEmployees] = useState(MOCK_EMPLOYEES);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(1);
 
+  const welcomeMessage = user
+    ? user.role === "employer"
+      ? `Welcome back, ${user.username}. You are in the Employer dashboard.`
+      : `Welcome back, ${user.username}. You are in the Employee dashboard.`
+    : "";
+
   // schedule[day][shift] = employeeId | null
   const [schedule, setSchedule] = useState(() => {
     const base = {};
@@ -85,6 +91,12 @@ export default function App() {
           <button onClick={() => { setUser(null); setRole(null); }}>Logout</button>
         </div>
       </header>
+
+      <div className="content">
+        <div className="card welcome-card">
+          <h2>{welcomeMessage}</h2>
+        </div>
+      </div>
 
       {user.role === "employer" ? (
         <EmployerView
