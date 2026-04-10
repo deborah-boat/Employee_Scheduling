@@ -1,6 +1,6 @@
 import express from 'express'
 import 'dotenv/config' 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from './generated/prisma/client.js';
 import { z, ZodError } from 'zod'
 
 // Define Zod schemas for request validation
