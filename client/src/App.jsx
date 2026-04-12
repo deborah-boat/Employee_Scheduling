@@ -5,16 +5,41 @@ import LoginScreen from "./components/LoginScreen";
 import EmployerView from "./components/EmployerView";
 import EmployeeView from "./components/EmployeeView";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+const AUTH_STORAGE_KEY = "employee-auth";
+
+function getStoredAuth() {
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return { role: null, user: null };
+
+    const parsed = JSON.parse(raw);
+    if (!parsed?.user || !parsed?.role) {
+      return { role: null, user: null };
+    }
+
+    return {
+      role: parsed.role,
+      user: parsed.user
+    };
+  } catch {
+    return { role: null, user: null };
+  }
+}
+
 export default function App() {
-  const [role, setRole] = useState(null);
-  const [user, setUser] = useState(null);
+  const storedAuth = getStoredAuth();
+
+  const [role, setRole] = useState(storedAuth.role);
+  const [user, setUser] = useState(storedAuth.user);
   const [employees, setEmployees] = useState(MOCK_EMPLOYEES);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(1);
 
-  const welcomeMessage = user
-    ? user.role === "employer"
-      ? `Welcome back, ${user.username}. You are in the Employer dashboard.`
-      : `Welcome back, ${user.username}. You are in the Employee dashboard.`
+  const welcomeName = user
+    ? String(user.username).split("@")[0].split(" ")[0]
+    : "";
+  const welcomeRole = user
+    ? String(user.role).toUpperCase()
     : "";
 
   // schedule[day][shift] = employeeId | null
@@ -32,15 +57,112 @@ export default function App() {
   // availability[employeeId][day][shift] = "available" | "unavailable"
   const [availability, setAvailability] = useState({});
 
-  const handleLogin = (username) => {
-    if (!role) return;
-    setUser({ username, role });
+  const handleLogin = async ({ email, password, rememberMe }) => {
+    if (!role) {
+      return { ok: false, message: "Please select a role first." };
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          role,
+          rememberMe
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          ok: false,
+          message: data?.message || "Login failed"
+        };
+      }
+
+      setUser({
+        id: data.user?.id,
+        username: data.user?.displayName || data.user?.email || email,
+        email: data.user?.email || email,
+        role: data.user?.role || role,
+        token: data.token
+      });
+
+      if (rememberMe) {
+        localStorage.setItem(
+          AUTH_STORAGE_KEY,
+          JSON.stringify({
+            role: data.user?.role || role,
+            user: {
+              id: data.user?.id,
+              username: data.user?.displayName || data.user?.email || email,
+              email: data.user?.email || email,
+              role: data.user?.role || role,
+              token: data.token
+            }
+          })
+        );
+      } else {
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+      }
+
+      return { ok: true };
+    } catch (_error) {
+      return {
+        ok: false,
+        message: "Unable to reach server. Please try again."
+      };
+    }
   };
 
   const handleRegisterEmployee = (data) => {
     const id = employees.length + 1;
     const newEmp = { id, ...data };
     setEmployees((prev) => [...prev, newEmp]);
+  };
+
+  const handleUpdateEmployee = (employeeId, updates) => {
+    setEmployees((prev) =>
+      prev.map((employee) =>
+        employee.id === employeeId
+          ? { ...employee, ...updates }
+          : employee
+      )
+    );
+  };
+
+  const handleDeleteEmployee = (employeeId) => {
+    setEmployees((prev) => {
+      const nextEmployees = prev.filter((employee) => employee.id !== employeeId);
+      if (selectedEmployeeId === employeeId) {
+        setSelectedEmployeeId(nextEmployees[0]?.id ?? null);
+      }
+      return nextEmployees;
+    });
+
+    setAvailability((prev) => {
+      const nextAvailability = { ...prev };
+      delete nextAvailability[employeeId];
+      return nextAvailability;
+    });
+
+    setSchedule((prev) => {
+      const next = {};
+
+      DAYS.forEach((day) => {
+        next[day] = {};
+        SHIFTS.forEach((shift) => {
+          next[day][shift] = prev[day][shift] === employeeId ? null : prev[day][shift];
+        });
+      });
+
+      return next;
+    });
   };
 
   const handleAssignShift = (day, shift, employeeId) => {
@@ -88,15 +210,18 @@ export default function App() {
         <div>Sundsgården – {user.role === "employer" ? "Employer" : "Employee"}</div>
         <div>
           <span className="username">{user.username}</span>
-          <button onClick={() => { setUser(null); setRole(null); }}>Logout</button>
+          <button onClick={() => { localStorage.removeItem(AUTH_STORAGE_KEY); setUser(null); setRole(null); }}>Logout</button>
         </div>
       </header>
 
-      <div className="content">
-        <div className="card welcome-card">
-          <h2>{welcomeMessage}</h2>
-        </div>
-      </div>
+      <main className="welcome-layout">
+        <section className="welcome-center">
+          <h1>Welcome, {welcomeName}!</h1>
+          <p>
+            You are logged in as <strong>{welcomeRole}</strong>.
+          </p>
+        </section>
+      </main>
 
       {user.role === "employer" ? (
         <EmployerView
@@ -104,6 +229,8 @@ export default function App() {
           schedule={schedule}
           availability={availability}
           onRegisterEmployee={handleRegisterEmployee}
+          onUpdateEmployee={handleUpdateEmployee}
+          onDeleteEmployee={handleDeleteEmployee}
           onAssignShift={handleAssignShift}
           selectedEmployeeId={selectedEmployeeId}
           setSelectedEmployeeId={setSelectedEmployeeId}
