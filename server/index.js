@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const bcrypt = require("bcrypt");
+const { z } = require("zod");
 const { PrismaClient } = require("./generated/prisma/client");
 
 // Define Zod schemas for request validation
