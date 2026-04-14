@@ -11,3 +11,6 @@ export const MOCK_EMPLOYEES = [
 
 export const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export const SHIFTS = ["morning", "afternoon", "night"];
+
+// Maps shift names to their database IDs (must match the seed data)
+export const SHIFT_IDS = { morning: 1, afternoon: 2, night: 3 };

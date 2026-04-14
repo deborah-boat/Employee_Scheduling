@@ -9,6 +9,8 @@ export default function EmployerView({
   schedule,
   availability,
   onRegisterEmployee,
+  onUpdateEmployee,
+  onDeleteEmployee,
   onAssignShift,
   selectedEmployeeId,
   setSelectedEmployeeId
@@ -35,11 +37,19 @@ export default function EmployerView({
       {tab === "employees" && (
         <EmployeeList employees={employees} onRegisterClick={() => setTab("register")} />
       )}
-      {tab === "register" && <RegisterEmployeeForm onSubmit={onRegisterEmployee} />}
+      {tab === "register" && (
+        <RegisterEmployeeForm
+          onSubmit={onRegisterEmployee}
+          employees={employees}
+          onUpdateEmployee={onUpdateEmployee}
+          onDeleteEmployee={onDeleteEmployee}
+        />
+      )}
       {tab === "jobschedule" && (
         <JobSchedule
           employees={employees}
           schedule={schedule}
+          availability={availability}
           onAssignShift={onAssignShift}
           selectedEmployeeId={selectedEmployeeId}
           setSelectedEmployeeId={setSelectedEmployeeId}

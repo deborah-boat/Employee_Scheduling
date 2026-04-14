@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon --exec tsx index.ts"
+    "dev": "nodemon --exec tsx index.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -13,9 +13,10 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
   "dependencies": {
     "@prisma/client": "6.17",
+    "@types/bcrypt": "^6.0.0",
+    "bcrypt": "^6.0.0",
     "dotenv": "^17.4.1",
     "express": "^5.2.1",
     "prisma": "^6.19.3"

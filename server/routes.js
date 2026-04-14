@@ -226,7 +226,7 @@ app.delete("/employees/:id", async (req, res) => {
   }
 });
 
-app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err, req, res, _next) => {
   if (err instanceof ZodError) { res.status(400).json(err.flatten()); return; }
   res.status(500).send(err instanceof Error ? err.message : "Unknown error");
 });
