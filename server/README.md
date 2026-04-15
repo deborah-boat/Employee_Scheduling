@@ -31,6 +31,14 @@ Passwords are stored as bcrypt hashes (not plain text).
 
 	npm run prisma:seed
 
+## Logging
+
+The server uses Winston for structured JSON logging.
+
+- Request logs include request id, method, path, status code, duration, and sanitized body.
+- Sensitive fields such as passwords and tokens are redacted.
+- Set `LOG_LEVEL` in `.env` (`info`, `warn`, `error`, etc.) to control verbosity.
+
 ## Endpoints
 
 ### Health
