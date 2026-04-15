@@ -1,27 +1,72 @@
 import { PrismaClient } from '../generated/prisma/client.ts';
-import 'dotenv/config'
-const prisma = new PrismaClient()
+import 'dotenv/config';
+import bcrypt from 'bcrypt';
 
-async function seed (){
-  const employeeAnna = await prisma.employee.create({data:{name: 'Anna Karlsson', email: "AnnaKarlsson@gmail.com"}})
-  //const employeeLillemor = await prisma.employee.create({data:{name: 'Lillemor Svensson', email: "LillemorSvensson@gmail.com"}})
+const prisma = new PrismaClient();
+const SALT_ROUNDS = 10;
 
-  const morningShift = await prisma.shift.create({data:{name: 'Morning', start_time: "7:00", end_time: "16:00" }})
-  const afternoonShift = await prisma.shift.create({data:{name: 'Afternoon', start_time: "15:00", end_time: "22:00" }})
-  const nightShift = await prisma.shift.create({data:{name: 'Night', start_time: "21:30", end_time: "7:15" }})
+async function seed() {
+  // Seed users (employer + employee accounts)
+  const users = [
+    { email: "employer1@sundsgarden.se", password: "123456", role: "employer", displayName: "Restaurant Manager" },
+    { email: "employee1@sundsgarden.se", password: "123456", role: "employee", displayName: "Ellen Johansson" }
+  ];
 
-  const morningShiftInstance = await prisma.shiftInstances.create({
-    data: {
-      shift_id: morningShift.id,
-      date: new Date('2026-05-01')}
-  })
-  
-  const employeeShift1 = await prisma.employeeShift.create({
-    data: {
-      employeeId: employeeAnna.id,
-      shiftInstanceId: morningShiftInstance.id,
-    } 
-  })
+  for (const u of users) {
+    const hashedPassword = await bcrypt.hash(u.password, SALT_ROUNDS);
+    await prisma.user.upsert({
+      where: { email: u.email },
+      update: { password: hashedPassword, role: u.role, displayName: u.displayName },
+      create: { email: u.email, password: hashedPassword, role: u.role, displayName: u.displayName }
+    });
+  }
+
+  // Seed employees
+  const employeeAnna = await prisma.employee.upsert({
+    where: { email: "AnnaKarlsson@gmail.com" },
+    update: {},
+    create: { name: 'Anna Karlsson', email: "AnnaKarlsson@gmail.com" }
+  });
+
+  // Seed shifts
+  const morningShift = await prisma.shift.upsert({
+    where: { id: 1 },
+    update: {},
+    create: { name: 'Morning', start_time: "7:00", end_time: "16:00" }
+  });
+  await prisma.shift.upsert({
+    where: { id: 2 },
+    update: {},
+    create: { name: 'Afternoon', start_time: "15:00", end_time: "22:00" }
+  });
+  await prisma.shift.upsert({
+    where: { id: 3 },
+    update: {},
+    create: { name: 'Night', start_time: "21:30", end_time: "7:15" }
+  });
+
+  // Seed shift instance
+  const morningShiftInstance = await prisma.shiftInstances.upsert({
+    where: { id: 1 },
+    update: {},
+    create: { shift_id: morningShift.id, date: new Date('2026-05-01') }
+  });
+
+  // Seed employee shift
+  await prisma.employeeShift.upsert({
+    where: { id: 1 },
+    update: {},
+    create: { employeeId: employeeAnna.id, shiftInstanceId: morningShiftInstance.id }
+  });
+
+  console.log("Seed data upserted successfully.");
 }
 
-seed().then( () => prisma.$disconnect())
+seed()
+  .catch((error) => {
+    console.error("Failed to seed database:", error);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

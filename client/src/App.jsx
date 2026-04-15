@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./index.css";
-import { DAYS, SHIFTS, MOCK_EMPLOYEES } from "./constants";
+import { DAYS, SHIFTS, SHIFT_IDS, MOCK_EMPLOYEES } from "./constants";
 import LoginScreen from "./components/LoginScreen";
 import EmployerView from "./components/EmployerView";
 import EmployeeView from "./components/EmployeeView";
@@ -57,6 +57,25 @@ export default function App() {
   // availability[employeeId][day][shift] = "available" | "unavailable"
   const [availability, setAvailability] = useState({});
 
+  // Reference Monday for the current week — used to compute real dates from day names
+  const [weekStartDate] = useState(() => {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon, ...
+    const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + diffToMonday);
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+  });
+
+  // Convert a day abbreviation ("Mon", "Tue", ...) to a YYYY-MM-DD date string
+  const dayToDate = (day) => {
+    const index = DAYS.indexOf(day); // DAYS starts on Monday
+    const date = new Date(weekStartDate);
+    date.setDate(weekStartDate.getDate() + index);
+    return date.toISOString().split("T")[0];
+  };
+
   const handleLogin = async ({ email, password, rememberMe }) => {
     if (!role) {
       return { ok: false, message: "Please select a role first." };
@@ -112,7 +131,7 @@ export default function App() {
       }
 
       return { ok: true };
-    } catch (_error) {
+    } catch {
       return {
         ok: false,
         message: "Unable to reach server. Please try again."
@@ -172,7 +191,8 @@ export default function App() {
     }));
   };
 
-  const handleSetAvailability = (employeeId, day, shift, value) => {
+  const handleSetAvailability = async (employeeId, day, shift, value) => {
+    // Update local state immediately (optimistic)
     setAvailability((prev) => ({
       ...prev,
       [employeeId]: {
@@ -183,6 +203,30 @@ export default function App() {
         }
       }
     }));
+
+    // If the employee is now unavailable and was assigned to this slot, free it
+    setSchedule((prev) => {
+      const current = prev[day]?.[shift] ?? null;
+      if (value === "unavailable" && current === employeeId) {
+        return { ...prev, [day]: { ...prev[day], [shift]: null } };
+      }
+      return prev;
+    });
+
+    // Persist to the server
+    try {
+      await fetch(`${API_BASE_URL}/availability/${employeeId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: dayToDate(day),
+          shift_id: SHIFT_IDS[shift],
+          status: value
+        })
+      });
+    } catch {
+      // Server is unreachable — local state already updated, no further action needed
+    }
   };
 
   if (!role) {
@@ -241,6 +285,7 @@ export default function App() {
           schedule={schedule}
           availability={availability}
           onSetAvailability={handleSetAvailability}
+          weekStartDate={weekStartDate}
         />
       )}
     </div>

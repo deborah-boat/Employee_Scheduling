@@ -49,6 +49,7 @@ export default function EmployerView({
         <JobSchedule
           employees={employees}
           schedule={schedule}
+          availability={availability}
           onAssignShift={onAssignShift}
           selectedEmployeeId={selectedEmployeeId}
           setSelectedEmployeeId={setSelectedEmployeeId}

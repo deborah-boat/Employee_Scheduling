@@ -1,9 +1,9 @@
 import { Fragment, useState } from "react";
-import { DAYS, SHIFTS, SHIFT_COLORS } from "../constants";
+import { SHIFTS } from "../constants";
 
 const DAY_LABELS = {
   Mon: "Mon 6/4",
-  Tue: "Tue 6/4",
+  Tue: "Tue 7/4",
   Wed: "Wed 1/4",
   Thu: "Thu 2/4",
   Fri: "Fri 3/4",
@@ -25,52 +25,45 @@ const SHIFT_TIMES = {
   night: "18-23"
 };
 
-const CHIP_COLORS = {
-  morning: "#A9CCF5",
-  afternoon: "#E9B3B3",
-  night: "#C9E3B8"
-};
+function initials(name) {
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
 
 export default function JobSchedule({
   employees,
   schedule,
+  availability,
   onAssignShift,
   selectedEmployeeId,
   setSelectedEmployeeId
 }) {
-  const [replacementRequest, setReplacementRequest] = useState(null);
+  // { mode: "assign"|"replace", day, shift, employee, avStatus, currentEmployee? }
+  const [confirmRequest, setConfirmRequest] = useState(null);
 
-  const handleCellClick = (day, shift, assignedEmployee) => {
-    if (!assignedEmployee) {
-      onAssignShift(day, shift, selectedEmployeeId);
-      return;
+  const handleCellClick = (day, shift) => {
+    const assignedId = schedule[day]?.[shift] ?? null;
+    const assignedEmployee = employees.find((e) => e.id === assignedId) || null;
+    const employee = employees.find((e) => e.id === selectedEmployeeId);
+    const avStatus = availability?.[selectedEmployeeId]?.[day]?.[shift] ?? null;
+
+    if (assignedEmployee) {
+      setConfirmRequest({ mode: "replace", day, shift, employee, avStatus, currentEmployee: assignedEmployee });
+    } else {
+      setConfirmRequest({ mode: "assign", day, shift, employee, avStatus });
     }
-
-    const requestedEmployee = employees.find((employee) => employee.id === selectedEmployeeId) || null;
-    setReplacementRequest({
-      day,
-      shift,
-      currentEmployee: assignedEmployee,
-      requestedEmployee
-    });
   };
 
-  const closeReplacementModal = () => {
-    setReplacementRequest(null);
-  };
+  const closeModal = () => setConfirmRequest(null);
 
-  const acceptReplacement = () => {
-    if (!replacementRequest?.requestedEmployee) {
-      closeReplacementModal();
-      return;
-    }
-
-    onAssignShift(
-      replacementRequest.day,
-      replacementRequest.shift,
-      replacementRequest.requestedEmployee.id
-    );
-    closeReplacementModal();
+  const handleAccept = () => {
+    if (!confirmRequest) return;
+    onAssignShift(confirmRequest.day, confirmRequest.shift, confirmRequest.employee.id);
+    closeModal();
   };
 
   return (
@@ -98,85 +91,152 @@ export default function JobSchedule({
           </select>
         </label>
 
+        <div className="job-grid-scroll">
         <div className="job-grid" role="grid">
           <div className="job-corner" />
           {DAY_ORDER.map((day) => (
-            <div key={day} className="job-day-header">
-              {DAY_LABELS[day]}
-            </div>
+            <div key={day} className="job-day-header">{DAY_LABELS[day]}</div>
           ))}
 
           {SHIFTS.map((shift) => (
             <Fragment key={shift}>
               <div className="job-shift-label">{SHIFT_LABELS[shift]}</div>
               {DAY_ORDER.map((day) => {
-                const employeeId = schedule[day]?.[shift] ?? null;
-                const assignedEmployee = employees.find((employee) => employee.id === employeeId);
-                const badgeColor = assignedEmployee ? CHIP_COLORS[shift] : "#f3f4f6";
+                const assignedId = schedule[day]?.[shift] ?? null;
+                const assignedEmployee = employees.find((e) => e.id === assignedId) || null;
+                const avStatus = availability?.[selectedEmployeeId]?.[day]?.[shift] ?? null;
+                const selEmp = employees.find((e) => e.id === selectedEmployeeId);
 
+                // ── Slot already confirmed ──────────────────────────────
+                if (assignedEmployee) {
+                  return (
+                    <button
+                      key={`${day}-${shift}`}
+                      type="button"
+                      className="job-cell"
+                      onClick={() => handleCellClick(day, shift)}
+                    >
+                      <div className="jc-card jc-card-confirmed">
+                        <div className="jc-avatar jc-av-confirmed">{initials(assignedEmployee.name)}</div>
+                        <div className="jc-info">
+                          <span className="jc-name">{assignedEmployee.name}</span>
+                          <span className="jc-badge jc-badge-confirmed">✓ Confirmed</span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                }
+
+                // ── Employee marked available ───────────────────────────
+                if (avStatus === "available") {
+                  return (
+                    <button
+                      key={`${day}-${shift}`}
+                      type="button"
+                      className="job-cell"
+                      onClick={() => handleCellClick(day, shift)}
+                    >
+                      <div className="jc-card jc-card-available">
+                        <div className="jc-avatar jc-av-available">{initials(selEmp.name)}</div>
+                        <div className="jc-info">
+                          <span className="jc-name">{selEmp.name}</span>
+                          <span className="jc-badge jc-badge-available">Available</span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                }
+
+                // ── Employee marked unavailable ────────────────────────
+                if (avStatus === "unavailable") {
+                  return (
+                    <button
+                      key={`${day}-${shift}`}
+                      type="button"
+                      className="job-cell"
+                      onClick={() => handleCellClick(day, shift)}
+                    >
+                      <div className="jc-card jc-card-unavailable">
+                        <div className="jc-avatar jc-av-unavailable">{initials(selEmp.name)}</div>
+                        <div className="jc-info">
+                          <span className="jc-name">{selEmp.name}</span>
+                          <span className="jc-badge jc-badge-unavailable">Unavailable</span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                }
+
+                // ── No availability set ────────────────────────────────
                 return (
                   <button
                     key={`${day}-${shift}`}
                     type="button"
-                    className="job-cell"
-                    onClick={() => handleCellClick(day, shift, assignedEmployee)}
+                    className="job-cell job-cell-empty"
+                    onClick={() => handleCellClick(day, shift)}
                   >
-                    {assignedEmployee ? (
-                      <div className="job-chip" style={{ backgroundColor: badgeColor, borderColor: SHIFT_COLORS[shift] }}>
-                        <span className="job-chip-check" aria-hidden="true">✓</span>
-                        <div className="job-chip-time">{SHIFT_TIMES[shift]}</div>
-                        <div className="job-chip-name">{assignedEmployee.name}</div>
-                      </div>
-                    ) : (
-                      <span className="job-available">Available</span>
-                    )}
+                    <span className="job-available">—</span>
                   </button>
                 );
               })}
             </Fragment>
           ))}
         </div>
+        </div>
       </div>
 
-      {replacementRequest && (
-        <div className="replacement-overlay" role="dialog" aria-modal="true">
-          <div className="replacement-modal">
-            <div className="replacement-people-row">
-              <div className="replacement-person">
-                <div className="replacement-avatar">👤</div>
-                <div className="replacement-name">{replacementRequest.currentEmployee.name.split(" ")[0]}</div>
-              </div>
+      {confirmRequest && (
+        <div className="jc-overlay" onClick={closeModal}>
+          <div className="jc-modal" onClick={(e) => e.stopPropagation()}>
 
-              <div className="replacement-arrow">⇄</div>
-
-              <div className="replacement-person">
-                <div className="replacement-avatar">👤</div>
-                <div className="replacement-name">
-                  {replacementRequest.requestedEmployee
-                    ? replacementRequest.requestedEmployee.name.split(" ")[0]
-                    : "Select"}
+            {confirmRequest.mode === "replace" ? (
+              <>
+                <h3 className="jc-modal-title">Replacement</h3>
+                <p className="jc-modal-sub">Manager Approval</p>
+                <div className="jc-modal-swap">
+                  <div className="jc-modal-person">
+                    <div className="jc-avatar jc-av-confirmed jc-av-lg">{initials(confirmRequest.currentEmployee.name)}</div>
+                    <span className="jc-modal-pname">{confirmRequest.currentEmployee.name.split(" ")[0]}</span>
+                    <span className="jc-badge jc-badge-confirmed">Current</span>
+                  </div>
+                  <span className="jc-swap-arrow">⇄</span>
+                  <div className="jc-modal-person">
+                    <div className={`jc-avatar jc-av-lg ${confirmRequest.avStatus === "unavailable" ? "jc-av-unavailable" : "jc-av-available"}`}>
+                      {initials(confirmRequest.employee.name)}
+                    </div>
+                    <span className="jc-modal-pname">{confirmRequest.employee.name.split(" ")[0]}</span>
+                    <span className={`jc-badge ${confirmRequest.avStatus === "unavailable" ? "jc-badge-unavailable" : "jc-badge-available"}`}>
+                      {confirmRequest.avStatus === "unavailable" ? "Unavailable" : "Available"}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </div>
+                {confirmRequest.avStatus === "unavailable" && (
+                  <p className="jc-modal-warning">⚠ This employee marked this shift as unavailable.</p>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="jc-modal-person jc-modal-single">
+                  <div className={`jc-avatar jc-av-lg ${confirmRequest.avStatus === "unavailable" ? "jc-av-unavailable" : "jc-av-available"}`}>
+                    {initials(confirmRequest.employee.name)}
+                  </div>
+                  <div className="jc-modal-pinfo">
+                    <span className="jc-modal-pname-lg">{confirmRequest.employee.name}</span>
+                    <span className="jc-modal-shift">{SHIFT_LABELS[confirmRequest.shift]} · {SHIFT_TIMES[confirmRequest.shift]}</span>
+                  </div>
+                </div>
+                <h3 className="jc-modal-title">
+                  {confirmRequest.avStatus === "unavailable" ? "Assign anyway?" : "Confirm shift?"}
+                </h3>
+                {confirmRequest.avStatus === "unavailable" && (
+                  <p className="jc-modal-warning">⚠ This employee marked this shift as unavailable.</p>
+                )}
+              </>
+            )}
 
-            <div className="replacement-title">Replacement</div>
-            <div className="replacement-subtitle">Manager Approval</div>
-
-            <div className="replacement-actions">
-              <button type="button" className="replacement-decline" onClick={closeReplacementModal}>
-                Decline
-              </button>
-              <button
-                type="button"
-                className="replacement-accept"
-                onClick={acceptReplacement}
-                disabled={
-                  !replacementRequest.requestedEmployee ||
-                  replacementRequest.requestedEmployee.id === replacementRequest.currentEmployee.id
-                }
-              >
-                Accept
-              </button>
+            <div className="jc-modal-actions">
+              <button type="button" className="jc-btn-decline" onClick={closeModal}>Decline</button>
+              <button type="button" className="jc-btn-accept" onClick={handleAccept}>Accept</button>
             </div>
           </div>
         </div>
@@ -184,3 +244,4 @@ export default function JobSchedule({
     </>
   );
 }
+
