@@ -1,4 +1,3 @@
-// Dependencies
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -372,7 +371,6 @@ process.on("beforeExit", async () => {
   await prisma.$disconnect();
 });
 
-// Start the server
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 });
