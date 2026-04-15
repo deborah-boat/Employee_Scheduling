@@ -2,6 +2,10 @@ const express = require ("express");
 const bcrypt = require ("bcrypt");
 const cors = require ("cors");
 const dotenv = require("dotenv");
+const bcrypt = require("bcrypt");
+const { randomUUID } = require("crypto");
+const { PrismaClient } = require("@prisma/client");
+const { logger, sanitizeObject } = require("./logger");
 const {z, ZodError} = require ("zod");
 const {PrismaClient} = require ("@prisma/client");
 
@@ -26,6 +30,30 @@ app.use(cors({
   origin: CLIENT_ORIGIN
 }));
 app.use(express.json());
+
+app.use((req, res, next) => {
+  req.requestId = req.get("x-request-id") || randomUUID();
+  res.setHeader("x-request-id", req.requestId);
+
+  const startedAt = process.hrtime.bigint();
+  res.on("finish", () => {
+    const elapsedNs = process.hrtime.bigint() - startedAt;
+    const durationMs = Number(elapsedNs) / 1_000_000;
+
+    logger.info("http_request", {
+      requestId: req.requestId,
+      method: req.method,
+      path: req.originalUrl,
+      statusCode: res.statusCode,
+      durationMs: Number(durationMs.toFixed(2)),
+      ip: req.ip,
+      userAgent: req.get("user-agent") || "",
+      body: sanitizeObject(req.body || {})
+    });
+  });
+
+  next();
+});
 
 // Define Zod schemas for request validation
 const employeeSchema = z.object({
@@ -81,6 +109,12 @@ app.post("/api/login", async (req, res) => {
   });
 
   if (!user) {
+    logger.warn("login_failed_user_not_found", {
+      requestId: req.requestId,
+      email: normalizedEmail,
+      role: normalizedRole
+    });
+
     return res.status(401).json({
       message: "Invalid credentials"
     });
@@ -90,10 +124,25 @@ app.post("/api/login", async (req, res) => {
   const isPasswordValid = await bcrypt.compare(password, user.password);
 
   if (!isPasswordValid) {
+    logger.warn("login_failed_invalid_password", {
+      requestId: req.requestId,
+      email: normalizedEmail,
+      role: normalizedRole,
+      userId: user.id
+    });
+
     return res.status(401).json({
       message: "Invalid credentials"
     });
   }
+
+  logger.info("login_success", {
+    requestId: req.requestId,
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+    rememberMe: Boolean(rememberMe)
+  });
 
   return res.status(200).json({
     message: "Login successful",
@@ -291,7 +340,12 @@ app.put("/schedule", async (req, res) => {
 
 // Global error handler
 app.use((err, _req, res, _next) => {
-  console.error(err);
+  logger.error("unhandled_error", {
+    requestId: _req?.requestId,
+    message: err.message,
+    stack: err.stack
+  });
+
   res.status(500).json({ message: "Internal server error" });
 });
 
@@ -301,5 +355,8 @@ process.on("beforeExit", async () => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT}`);
+  logger.info("server_started", {
+    port: PORT,
+    clientOrigin: CLIENT_ORIGIN
+  });
 });
