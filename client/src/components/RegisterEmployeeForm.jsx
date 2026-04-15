@@ -1,11 +1,13 @@
 import { useState } from "react";
 
+// Form to register new employees and manage the existing employee list
 export default function RegisterEmployeeForm({
   onSubmit,
   employees = [],
   onUpdateEmployee,
   onDeleteEmployee
 }) {
+  // New employee form state
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -14,8 +16,11 @@ export default function RegisterEmployeeForm({
     role: "Waiter",
     profilePicture: ""
   });
+  // Tracks which employee login codes are visible in the table
   const [revealedCodes, setRevealedCodes] = useState({});
+  // ID of the employee currently being edited (null = none)
   const [editingEmployeeId, setEditingEmployeeId] = useState(null);
+  // Inline edit form state
   const [editForm, setEditForm] = useState({
     name: "",
     email: "",
@@ -23,10 +28,12 @@ export default function RegisterEmployeeForm({
     loginCode: ""
   });
 
+  // Update a single field in the new employee form
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  // Submit the new employee and reset the form
   const handleSubmit = (event) => {
     event.preventDefault();
     if (!form.firstName || !form.lastName) return;
@@ -50,6 +57,7 @@ export default function RegisterEmployeeForm({
     });
   };
 
+  // Convert the selected image file to a base64 data URL
   const handleProfilePictureChange = (event) => {
     const file = event.target.files?.[0];
     if (!file) {
@@ -64,6 +72,7 @@ export default function RegisterEmployeeForm({
     reader.readAsDataURL(file);
   };
 
+  // Show/hide the login code for a specific employee row
   const toggleCode = (employeeId) => {
     setRevealedCodes((prev) => ({
       ...prev,
@@ -71,6 +80,7 @@ export default function RegisterEmployeeForm({
     }));
   };
 
+  // Put a row into edit mode, pre-filling fields with current values
   const startEditing = (employee) => {
     setEditingEmployeeId(employee.id);
     setEditForm({
@@ -81,6 +91,7 @@ export default function RegisterEmployeeForm({
     });
   };
 
+  // Exit edit mode without saving
   const cancelEditing = () => {
     setEditingEmployeeId(null);
     setEditForm({
@@ -91,6 +102,7 @@ export default function RegisterEmployeeForm({
     });
   };
 
+  // Save changes for the employee being edited
   const saveEditing = (employeeId) => {
     const trimmedName = editForm.name.trim();
     if (!trimmedName) return;
@@ -106,6 +118,7 @@ export default function RegisterEmployeeForm({
     cancelEditing();
   };
 
+  // Ask for confirmation before removing an employee
   const removeEmployee = (employeeId) => {
     const confirmed = window.confirm("Remove this employee from the list?");
     if (!confirmed) return;
@@ -116,6 +129,7 @@ export default function RegisterEmployeeForm({
     }
   };
 
+  // Return a CSS class based on the employee's role
   const getRoleClass = (roleValue = "") => {
     const role = String(roleValue).toLowerCase();
     if (role.includes("head")) return "role-head";
@@ -123,6 +137,7 @@ export default function RegisterEmployeeForm({
     return "role-waiter";
   };
 
+  // Return the login code or dots depending on the revealed state
   const renderCode = (employee) => {
     const code = employee.loginCode || employee.phone || "----";
     if (revealedCodes[employee.id]) return code;

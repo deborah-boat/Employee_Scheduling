@@ -1,15 +1,18 @@
 import { Fragment, useMemo, useRef, useState } from "react";
 import { SHIFTS } from "../constants";
 
+// Short labels for days and months used in date display
 const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+// Human-readable time ranges for each shift
 const SHIFT_TIMES = {
   morning: "7-15",
   afternoon: "15-18",
   night: "18-23"
 };
 
+// Determine the availability status of an employee for a given day
 function getStatus(availabilityByDay = {}, assignedShift) {
   const availableShift = SHIFTS.find((shift) => availabilityByDay?.[shift] === "available");
   if (availableShift) {
@@ -40,12 +43,14 @@ function getStatus(availabilityByDay = {}, assignedShift) {
   };
 }
 
+// Return a new Date shifted by the given number of days
 function addDays(baseDate, days) {
   const next = new Date(baseDate);
   next.setDate(next.getDate() + days);
   return next;
 }
 
+// Format a Date as "YYYY-MM-DD" for the date input value
 function formatDateInputValue(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -53,6 +58,7 @@ function formatDateInputValue(date) {
   return `${year}-${month}-${day}`;
 }
 
+// Format the week range label shown in the navigation bar (e.g. "Apr 1-7")
 function formatRangeLabel(startDate) {
   const endDate = addDays(startDate, 6);
   const sameMonth = startDate.getMonth() === endDate.getMonth();
@@ -65,10 +71,27 @@ function formatRangeLabel(startDate) {
   return `${MONTH_SHORT[startDate.getMonth()]} ${startDate.getDate()}-${MONTH_SHORT[endDate.getMonth()]} ${endDate.getDate()}`;
 }
 
+// Aggregate all shifts for one employee on one day into a readable summary
+function getDetailStatus(availabilityByDay = {}) {
+  const available = SHIFTS.filter((s) => availabilityByDay?.[s] === "available");
+  const unavailable = SHIFTS.filter((s) => availabilityByDay?.[s] === "unavailable");
+
+  if (available.length === SHIFTS.length) return { type: "available", text: "Available all day" };
+  if (unavailable.length === SHIFTS.length) return { type: "unavailable", text: "Unavailable" };
+  if (available.length > 0) {
+    return { type: "prefer", text: available.map((s) => `Prefers ${SHIFT_TIMES[s]}`).join(", ") };
+  }
+  return { type: "available", text: "Available" };
+}
+
+// Weekly schedule grid showing each employee's availability per day
 export default function WorkSchedule({ employees, schedule, availability }) {
+  const [detailEmployee, setDetailEmployee] = useState(null);
   const dateInputRef = useRef(null);
+  // Start the calendar on April 1, 2026 by default
   const [weekStartDate, setWeekStartDate] = useState(() => new Date(2026, 3, 1));
 
+  // Build the array of 7 day objects for the current week
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, index) => {
       const date = addDays(weekStartDate, index);
@@ -80,6 +103,7 @@ export default function WorkSchedule({ employees, schedule, availability }) {
     });
   }, [weekStartDate]);
 
+  // Open the native date picker
   const openDatePicker = () => {
     if (dateInputRef.current?.showPicker) {
       dateInputRef.current.showPicker();
@@ -88,19 +112,23 @@ export default function WorkSchedule({ employees, schedule, availability }) {
     dateInputRef.current?.click();
   };
 
+  // Navigate one week back
   const goToPreviousWeek = () => {
     setWeekStartDate((prev) => addDays(prev, -7));
   };
 
+  // Navigate one week forward
   const goToNextWeek = () => {
     setWeekStartDate((prev) => addDays(prev, 7));
   };
 
+  // Jump to the current week
   const goToToday = () => {
     setWeekStartDate(new Date());
   };
 
   return (
+    <>
     <div className="card work-card">
       <h2 className="work-title">Work Schedule</h2>
 
@@ -137,7 +165,14 @@ export default function WorkSchedule({ employees, schedule, availability }) {
 
           return (
             <Fragment key={employee.id}>
-              <div className="work-employee-name">
+              <div
+                className="work-employee-name work-employee-clickable"
+                role="button"
+                tabIndex={0}
+                title="Click to view availability"
+                onClick={() => setDetailEmployee(employee)}
+                onKeyDown={(e) => e.key === "Enter" && setDetailEmployee(employee)}
+              >
                 <span className="work-user-icon" aria-hidden="true">◉</span>
                 {employee.name}
               </div>
@@ -164,7 +199,31 @@ export default function WorkSchedule({ employees, schedule, availability }) {
           );
         })}
       </div>
-      <div className="work-helper-note">Set employee availability in Employee view to update this table.</div>
+      <div className="work-helper-note">Click an employee name to view their availability details.</div>
     </div>
+
+    {detailEmployee && (
+      <div className="ws-detail-overlay" onClick={() => setDetailEmployee(null)}>
+        <div className="ws-detail-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="ws-detail-header">
+            <span className="ws-detail-name">{detailEmployee.name}</span>
+            <button className="ws-detail-close" onClick={() => setDetailEmployee(null)} aria-label="Close">✕</button>
+          </div>
+          <div className="ws-detail-subtitle">Weekly availability</div>
+          <div className="ws-detail-grid">
+            {weekDays.map((day) => {
+              const status = getDetailStatus(availability?.[detailEmployee.id]?.[day.dayKey]);
+              return (
+                <div key={day.label} className="ws-detail-row">
+                  <span className="ws-detail-day">{day.label}</span>
+                  <span className={`ws-detail-badge ws-detail-${status.type}`}>{status.text}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
