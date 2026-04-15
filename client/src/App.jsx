@@ -129,7 +129,6 @@ export default function App() {
       } else {
         localStorage.removeItem(AUTH_STORAGE_KEY);
       }
-
       return { ok: true };
     } catch {
       return {
@@ -278,6 +277,7 @@ export default function App() {
           onAssignShift={handleAssignShift}
           selectedEmployeeId={selectedEmployeeId}
           setSelectedEmployeeId={setSelectedEmployeeId}
+          weekStartDate={weekStartDate}
         />
       ) : (
         <EmployeeView

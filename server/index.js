@@ -1,9 +1,31 @@
-const express = require("express");
-const cors = require("cors");
+const express = require ("express");
+const bcrypt = require ("bcrypt");
+const cors = require ("cors");
 const dotenv = require("dotenv");
-const bcrypt = require("bcrypt");
-const { z } = require("zod");
-const { PrismaClient } = require("./generated/prisma/client");
+const {z, ZodError} = require ("zod");
+const {PrismaClient} = require ("@prisma/client");
+
+// Load environment variables from .env
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 4000;
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
+
+// Initialize Prisma Client
+const prisma = new PrismaClient();
+
+// Read the database URL from environment
+const databaseUrl = process.env.DATABASE_URL;
+// Crash early if the database URL is missing
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL is not set');
+}
+
+app.use(cors({
+  origin: CLIENT_ORIGIN
+}));
+app.use(express.json());
 
 // Define Zod schemas for request validation
 const employeeSchema = z.object({
@@ -24,27 +46,6 @@ const scheduleSchema = z.object({
   shiftInstanceId: z.coerce.number().int()
 })
 
-// Load environment variables from .env
-dotenv.config();
-
-const PORT = process.env.PORT || 4000;
-
-// Read the database URL from environment
-const databaseUrl = process.env.DATABASE_URL;
-
-// Crash early if the database URL is missing
-if (!databaseUrl) {
-  throw new Error('DATABASE_URL is not set');
-}
-
-// Initialize Prisma Client
-const prisma = new PrismaClient();
-
-// Create Express app and apply middleware
-const app = express();
-app.use(cors());
-app.use(express.json());
-
 // Health check — used to verify the server is reachable
 app.get("/api/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
@@ -60,17 +61,17 @@ app.post("/api/login", async (req, res) => {
       message: "email, password, and role are required"
     });
   }
-
+  
   // Normalize inputs to avoid case mismatches
   const normalizedEmail = String(email).trim().toLowerCase();
-
+  
   const normalizedRole = String(role).toLowerCase();
   if (normalizedRole !== "employee" && normalizedRole !== "employer") {
     return res.status(400).json({
       message: "role must be either employee or employer"
     });
   }
-
+  
   // Look up the user by email and role
   const user = await prisma.user.findFirst({
     where: {
@@ -110,102 +111,28 @@ app.post("/api/login", async (req, res) => {
   });
 });
 
-// PUT /availability/:id — employee sets their availability for a specific date and shift
-app.put("/availability/:id", async (req, res) => {
-  try {
-    const employeeId = parseInt(req.params.id);
-    if (isNaN(employeeId)) {
-      return res.status(400).json({ message: "Invalid employee id" });
-    }
-
-    const { date, shift_id, status } = req.body;
-    if (!date || shift_id == null || !status) {
-      return res.status(400).json({ message: "date, shift_id, and status are required" });
-    }
-
-    const shiftIdInt = parseInt(shift_id);
-    const parsedDate = new Date(date);
-
-    const existing = await prisma.availability.findFirst({
-      where: { employeeId, shift_id: shiftIdInt, date: parsedDate }
-    });
-
-    let availability;
-    if (existing) {
-      availability = await prisma.availability.update({
-        where: { id: existing.id },
-        data: { status }
-      });
-    } else {
-      availability = await prisma.availability.create({
-        data: { employeeId, shift_id: shiftIdInt, date: parsedDate, status }
-      });
-    }
-
-    return res.json(availability);
-  } catch (error) {
-    return res.status(500).json({ message: error instanceof Error ? error.message : "Unknown error" });
-  }
-});
-
-// GET /availability/:id — get all availability records for an employee
-app.get("/availability/:id", async (req, res) => {
-  try {
-    const employeeId = parseInt(req.params.id);
-    if (isNaN(employeeId)) {
-      return res.status(400).json({ message: "Invalid employee id" });
-    }
-
-    const availability = await prisma.availability.findMany({
-      where: { employeeId }
-    });
-
-    return res.json(availability);
-  } catch (error) {
-    return res.status(500).json({ message: error instanceof Error ? error.message : "Unknown error" });
-  }
-});
-
-// GET /employee – get employee details (employee and employer)
-app.get("/employee", async (req, res) => {
-  // For demonstration, we return the first employee. 
-  try {
-    const employees = await prisma.employee.findFirst()
-    res.json(employees)
-  } catch (error) {
-    if(error instanceof Error){
-      res.status(500).send(error.message)
-    }
-    res.status(500).send("Unknown error")
-  }
-})
-
 // GET /employees – list all employees with their shifts (employee and employer)
 app.get("/employees", async (req, res) => {
-// Optional query parameter to filter by name
-try {
-const { name } = req.query;
-
-const employees = await prisma.employee.findMany({
-    where: {
-    name: name ? {contains: String(name), mode: "insensitive"} : undefined
-   
-    },
-    include: { 
-      shifts: {
-        include: {
-          shiftInstance: {
-            include : { shift: true }
+  try {
+    const { name } = req.query;
+    const employees = await prisma.employee.findMany({
+       where: {
+        name: name ? {contains: String(name), mode: "insensitive"} : undefined
+      },
+      include: { 
+        shifts: {
+          include: {
+            shiftInstance: {
+              include : { shift: true }
           }
         }
       }
     }
   });
-
-res.json(employees);
-
-    } catch (error) 
-  { res.status(500).send(error instanceof Error ? error.message : "Unknown error"); }
+  res.json(employees);
+  } catch (error) { 
+    res.status(500).send(error instanceof Error ? error.message : "Unknown error"); 
+  }
 })
 
 // POST /employees – register new employee (employer only)
@@ -223,10 +150,43 @@ app.post("/employees", async (req, res) => {
     const employee = await prisma.employee.create({
       data: { name, email }
     });
-
     res.status(201).json(employee);
   } catch (error) {
     if (error instanceof ZodError) { res.status(400).json(error.flatten()); return; }
+    res.status(500).send(error instanceof Error ? error.message : "Unknown error");
+  }
+});
+
+// GET /employee – get employee details (employee and employer)
+app.get("/employee", async (_req, res) => {
+  // For demonstration, we return the first employee. 
+  try {
+    const employees = await prisma.employee.findFirst()
+    res.json(employees)
+  } catch (error) {
+    if(error instanceof Error){
+      res.status(500).send(error.message)
+    }
+    res.status(500).send("Unknown error")
+  }
+})
+
+// DELETE /employees/:id – employer only
+app.delete("/employees/:id", async (req, res) => {
+  try {
+    const role = req.headers["x-role"];
+    if (role !== "employer") {
+      res.status(403).send("Forbidden: employer access only");
+      return;
+    }
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).send("Invalid employee id");
+      return;
+    }
+    await prisma.employee.delete({ where: { id } });
+    res.status(204).send();
+  } catch (error) {
     res.status(500).send(error instanceof Error ? error.message : "Unknown error");
   }
 });
@@ -239,12 +199,10 @@ app.get("/availability/:id", async (req, res) => {
       res.status(400).send("Invalid employee id");
       return;
     }
-
     const availability = await prisma.availability.findMany({
       where: { employeeId: id },
       include: { shift: true }
     });
-
     res.json(availability);
   } catch (error) {
     if (error instanceof ZodError) { res.status(400).json(error.flatten()); return; }
@@ -267,21 +225,20 @@ app.put("/availability/:id", async (req, res) => {
       where: { employeeId, shift_id, date: new Date(date) }
     });
 
-    let availability;
-    if (existing) {
-      availability = await prisma.availability.update({
+    const result = existing 
+    ? await prisma.availability.update({
         where: { id: existing.id },
         data: { status }
-      });
-    } else {
-      availability = await prisma.availability.create({
+      })
+      : await prisma.availability.create({
         data: { employeeId, shift_id, date: new Date(date), status }
       });
-    }
-
-    res.json(availability);
+    
+    res.json(result);
   } catch (error) {
-    if (error instanceof ZodError) { res.status(400).json(error.flatten()); return; }
+    if (error instanceof ZodError) { 
+      return res.status(400).json(error.flatten()); 
+    }
     res.status(500).send(error instanceof Error ? error.message : "Unknown error");
   }
 });
@@ -297,7 +254,6 @@ app.get("/schedule", async (req, res) => {
         }
       }
     });
-
     res.json(schedule);
   } catch (error) {
     res.status(500).send(error instanceof Error ? error.message : "Unknown error");
@@ -314,7 +270,6 @@ app.put("/schedule", async (req, res) => {
     }
 
     const { employeeId, shiftInstanceId } = scheduleSchema.parse(req.body);
-
     const assignment = await prisma.employeeShift.create({
       data: {
         employeeId,
@@ -327,37 +282,11 @@ app.put("/schedule", async (req, res) => {
     });
 
     res.json(assignment);
+
   } catch (error) {
     if (error instanceof ZodError) { res.status(400).json(error.flatten()); return; }
     res.status(500).send(error instanceof Error ? error.message : "Unknown error");
   }
-});
-
-// DELETE /employees/:id – employer only
-app.delete("/employees/:id", async (req, res) => {
-  try {
-    const role = req.headers["x-role"];
-    if (role !== "employer") {
-      res.status(403).send("Forbidden: employer access only");
-      return;
-    }
-
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      res.status(400).send("Invalid employee id");
-      return;
-    }
-
-    await prisma.employee.delete({ where: { id } });
-    res.status(204).send();
-  } catch (error) {
-    res.status(500).send(error instanceof Error ? error.message : "Unknown error");
-  }
-});
-
-app.use((err, req, res, _next) => {
-  if (err instanceof ZodError) { res.status(400).json(err.flatten()); return; }
-  res.status(500).send(err instanceof Error ? err.message : "Unknown error");
 });
 
 // Global error handler

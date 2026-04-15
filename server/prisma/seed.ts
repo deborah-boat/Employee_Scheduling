@@ -1,26 +1,42 @@
-import { PrismaClient } from '../generated/prisma/client.ts';
-import 'dotenv/config';
-import bcrypt from 'bcrypt';
+const {PrismaClient} = require ("@prisma/client");
+const bcrypt = require ("bcrypt");
 
 const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
 
 async function seed() {
-  // Seed users (employer + employee accounts)
   const users = [
-    { email: "employer1@sundsgarden.se", password: "123456", role: "employer", displayName: "Restaurant Manager" },
-    { email: "employee1@sundsgarden.se", password: "123456", role: "employee", displayName: "Ellen Johansson" }
-  ];
-
-  for (const u of users) {
-    const hashedPassword = await bcrypt.hash(u.password, SALT_ROUNDS);
-    await prisma.user.upsert({
-      where: { email: u.email },
-      update: { password: hashedPassword, role: u.role, displayName: u.displayName },
-      create: { email: u.email, password: hashedPassword, role: u.role, displayName: u.displayName }
-    });
-  }
-
+      {
+        email: "employer1@sundsgarden.se",
+        password: "123456",
+        role: "employer",
+        displayName: "Restaurant Manager"
+      },
+      {
+        email: "employee1@sundsgarden.se",
+        password: "123456",
+        role: "employee",
+        displayName: "Ellen Johansson"
+      }
+    ];
+  
+    for (const user of users) {
+      const hashedPassword = await bcrypt.hash(user.password, SALT_ROUNDS);
+  
+      await prisma.user.upsert({
+        where: { email: user.email },
+        update: {
+          password: hashedPassword,
+          role: user.role,
+          displayName: user.displayName
+        },
+        create: {
+          ...user,
+          password: hashedPassword
+        }
+      });
+    }
+  
   // Seed employees
   const employeeAnna = await prisma.employee.upsert({
     where: { email: "AnnaKarlsson@gmail.com" },
@@ -69,4 +85,4 @@ seed()
   })
   .finally(async () => {
     await prisma.$disconnect();
-  });
+});
