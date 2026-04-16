@@ -1,10 +1,311 @@
-.register-employee-container {
+/* ── RegisterEmployeeForm redesign ── */
+
+/* Outer wrapper */
+.ref-container {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Section (register form + employee list) */
+.ref-section {
+  background: #fff;
+  border-radius: 14px;
+  padding: 28px 28px 24px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+  box-sizing: border-box;
+}
+
+/* Heading row */
+.ref-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  position: relative;
+  padding-bottom: 14px;
+}
+
+.ref-heading-icon {
+  width: 20px;
+  height: 20px;
+  color: #1f2937;
+  flex-shrink: 0;
+}
+
+.ref-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.ref-underline {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 130px;
+  height: 3px;
+  background: #f59e0b;
+  border-radius: 2px;
+}
+
+/* Photo upload */
+.ref-photo-row {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.ref-photo-box {
+  width: 120px;
+  height: 120px;
+  border: 1.5px dashed #d1d5db;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: #f9fafb;
+  overflow: hidden;
+  transition: border-color 0.2s;
+  flex-shrink: 0;
+}
+
+.ref-photo-box:hover {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.ref-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ref-photo-icon {
+  width: 38px;
+  height: 38px;
+  color: #9ca3af;
+  stroke-width: 1.5;
+}
+
+.ref-file-input {
+  display: none;
+}
+
+/* Form grid */
+.ref-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ref-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  padding: 2rem;
-  background-color: #f9fafb;
+  gap: 12px;
+}
+
+.ref-input {
   width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: #374151;
+  background: #fff;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.ref-input:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+.ref-input::placeholder {
+  color: #9ca3af;
+}
+
+.ref-select-wrap {
+  position: relative;
+}
+
+.ref-select-wrap::after {
+  content: '';
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid #9ca3af;
+  pointer-events: none;
+}
+
+.ref-select {
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+/* ── Employees table ── */
+.ref-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ref-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+  min-width: 540px;
+}
+
+.ref-table thead tr {
+  border: none;
+}
+
+.ref-table th {
+  padding: 0 5px;
+  font-weight: 500;
+}
+
+.ref-table td {
+  padding: 0 5px;
+}
+
+.ref-cell {
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #fff;
+  font-size: 0.875rem;
+  color: #374151;
+  white-space: nowrap;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+}
+
+thead .ref-cell {
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+/* Edit inputs inside cells */
+.ref-edit-input,
+.ref-edit-select {
+  width: 100%;
+  border: none;
+  outline: none;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: #374151;
+  background: transparent;
+  min-width: 0;
+}
+
+/* Action buttons */
+.ref-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.ref-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ref-btn:hover {
+  background: #f3f4f6;
+}
+
+.ref-btn-danger {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+}
+
+.ref-btn-danger:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.ref-btn-primary {
+  background: #f59e0b;
+  color: #fff;
+  border-color: #f59e0b;
+}
+
+.ref-btn-primary:hover {
+  background: #d97706;
+  border-color: #d97706;
+}
+
+/* Empty state */
+.ref-empty {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  padding: 16px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .ref-section {
+    padding: 20px 18px;
+  }
+
+  .ref-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 520px) {
+  .ref-section {
+    padding: 16px 14px;
+  }
+
+  .ref-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .ref-photo-box {
+    width: 100px;
+    height: 100px;
+  }
+
+  .ref-cell {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
+  .ref-btn {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
 }
 
 /* Left Section - Form */

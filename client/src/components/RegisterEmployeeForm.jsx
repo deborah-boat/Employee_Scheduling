@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "../styles/RegisterEmployeeForm.css";
 
 // Form to register new employees and manage the existing employee list
 export default function RegisterEmployeeForm({
@@ -129,14 +130,6 @@ export default function RegisterEmployeeForm({
     }
   };
 
-  // Return a CSS class based on the employee's role
-  const getRoleClass = (roleValue = "") => {
-    const role = String(roleValue).toLowerCase();
-    if (role.includes("head")) return "role-head";
-    if (role.includes("runner")) return "role-runner";
-    return "role-waiter";
-  };
-
   // Return the login code or dots depending on the revealed state
   const renderCode = (employee) => {
     const code = employee.loginCode || employee.phone || "----";
@@ -145,197 +138,189 @@ export default function RegisterEmployeeForm({
   };
 
   return (
-    <div className="card register-card">
-      <div className="register-header">
-        <h2>Register new employee</h2>
-        <div className="register-brand">
-          <div className="brand-title">Sundsgarden</div>
-          <div className="brand-subtitle">HOTELL | KONFERENS</div>
-        </div>
-      </div>
+    <div className="ref-container">
 
-      <form className="register-layout" onSubmit={handleSubmit}>
-        <div className="register-fields">
-          <label>
-            <div className="field-head">
-              <span>First name</span>
-              <span className="field-required">Required</span>
-            </div>
+      {/* ── Register new employee ── */}
+      <div className="ref-section">
+        <div className="ref-heading">
+          <svg className="ref-heading-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <h2 className="ref-title">Register new employee</h2>
+          <span className="ref-underline" />
+        </div>
+
+        <form className="ref-form" onSubmit={handleSubmit}>
+          {/* Photo upload */}
+          <div className="ref-photo-row">
+            <label className="ref-photo-box" htmlFor="profile-picture-input">
+              {form.profilePicture ? (
+                <img src={form.profilePicture} alt="Profile preview" className="ref-photo-img" />
+              ) : (
+                <svg className="ref-photo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+              )}
+            </label>
             <input
+              id="profile-picture-input"
+              type="file"
+              accept="image/*"
+              className="ref-file-input"
+              onChange={handleProfilePictureChange}
+            />
+          </div>
+
+          {/* Input grid */}
+          <div className="ref-grid">
+            <input
+              className="ref-input"
+              placeholder="First Name"
               value={form.firstName}
               onChange={(e) => handleChange("firstName", e.target.value)}
             />
-          </label>
-
-          <label>
-            <div className="field-head">
-              <span>Last name</span>
-              <span className="field-required">Required</span>
-            </div>
             <input
+              className="ref-input"
+              placeholder="Last Name"
               value={form.lastName}
               onChange={(e) => handleChange("lastName", e.target.value)}
             />
-          </label>
-
-          <label>
-            <div className="field-head">
-              <span>Email</span>
-              <span className="field-required">Required</span>
-            </div>
             <input
+              className="ref-input"
+              placeholder="Email"
               value={form.email}
               onChange={(e) => handleChange("email", e.target.value)}
             />
-          </label>
-
-          <label>
-            <div className="field-head">
-              <span>Login code</span>
-              <span className="field-required">Required</span>
-            </div>
             <input
+              className="ref-input"
+              placeholder="Login Code"
               value={form.loginCode}
               onChange={(e) => handleChange("loginCode", e.target.value)}
             />
-          </label>
-        </div>
-
-        <div className="register-side">
-          <label>
-            <div className="field-head simple">
-              <span>Role</span>
+            <div className="ref-select-wrap">
+              <select
+                className="ref-input ref-select"
+                value={form.role}
+                onChange={(e) => handleChange("role", e.target.value)}
+              >
+                <option value="Waiter">Waiter</option>
+                <option value="Runner">Runner</option>
+                <option value="Head Waiter">Head Waiter</option>
+              </select>
             </div>
-            <select value={form.role} onChange={(e) => handleChange("role", e.target.value)}>
-              <option value="Waiter">Waiter</option>
-              <option value="Runner">Runner</option>
-              <option value="Head Waiter">Head Waiter</option>
-            </select>
-          </label>
-        </div>
-
-        <div className="register-photo">
-          <div className="field-head simple">
-            <span>Upload Photo</span>
           </div>
-          <label className="upload-box" htmlFor="profile-picture-input">
-            {form.profilePicture ? (
-              <img src={form.profilePicture} alt="Profile preview" className="upload-preview" />
-            ) : (
-              <span className="upload-placeholder">+</span>
-            )}
-          </label>
-          <input
-            id="profile-picture-input"
-            className="upload-input"
-            type="file"
-            accept="image/*"
-            onChange={handleProfilePictureChange}
-          />
+        </form>
+      </div>
 
-          <button type="submit" className="submit-register">Submit</button>
+      {/* ── Registered employees ── */}
+      <div className="ref-section">
+        <div className="ref-heading">
+          <svg className="ref-heading-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <h2 className="ref-title">Registered employees</h2>
+          <span className="ref-underline" />
         </div>
-      </form>
 
-      <div className="registered-section">
-        <h3>Registered employees</h3>
-        <div className="registered-table-wrap">
-          <table className="registered-table">
+        <div className="ref-table-scroll">
+          <table className="ref-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Code</th>
-                <th>Actions</th>
+                <th><div className="ref-cell">Name</div></th>
+                <th><div className="ref-cell">Email</div></th>
+                <th><div className="ref-cell">Role</div></th>
+                <th><div className="ref-cell">Code</div></th>
+                <th><div className="ref-cell">Actions</div></th>
               </tr>
             </thead>
             <tbody>
               {employees.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="registered-empty">No employees registered yet.</td>
+                  <td colSpan={5} className="ref-empty">No employees registered yet.</td>
                 </tr>
               )}
               {employees.map((employee) => {
                 const isEditing = editingEmployeeId === employee.id;
-
                 return (
                   <tr key={employee.id}>
                     <td>
-                      {isEditing ? (
-                        <input
-                          className="table-input"
-                          value={editForm.name}
-                          onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
-                        />
-                      ) : (
-                        employee.name
-                      )}
-                    </td>
-                    <td>
-                      {isEditing ? (
-                        <input
-                          className="table-input"
-                          type="email"
-                          value={editForm.email}
-                          onChange={(e) => setEditForm((prev) => ({ ...prev, email: e.target.value }))}
-                        />
-                      ) : (
-                        employee.email || "-"
-                      )}
-                    </td>
-                    <td>
-                      {isEditing ? (
-                        <select
-                          className="table-select"
-                          value={editForm.role}
-                          onChange={(e) => setEditForm((prev) => ({ ...prev, role: e.target.value }))}
-                        >
-                          <option value="Waiter">Waiter</option>
-                          <option value="Runner">Runner</option>
-                          <option value="Head Waiter">Head Waiter</option>
-                        </select>
-                      ) : (
-                        <span className={`role-pill ${getRoleClass(employee.position)}`}>
-                          {employee.position || "Waiter"}
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      {isEditing ? (
-                        <input
-                          className="table-input"
-                          value={editForm.loginCode}
-                          onChange={(e) => setEditForm((prev) => ({ ...prev, loginCode: e.target.value }))}
-                        />
-                      ) : (
-                        <span className="code-text">{renderCode(employee)}</span>
-                      )}
-                    </td>
-                    <td>
-                      <div className="row-actions">
+                      <div className="ref-cell">
                         {isEditing ? (
-                          <>
-                            <button type="button" className="table-btn primary" onClick={() => saveEditing(employee.id)}>
-                              Save
-                            </button>
-                            <button type="button" className="table-btn" onClick={cancelEditing}>
-                              Cancel
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button type="button" className="table-btn" onClick={() => toggleCode(employee.id)}>
-                              {revealedCodes[employee.id] ? "Hide" : "Show"}
-                            </button>
-                            <button type="button" className="table-btn" onClick={() => startEditing(employee)}>
-                              Edit
-                            </button>
-                            <button type="button" className="table-btn danger" onClick={() => removeEmployee(employee.id)}>
-                              Remove
-                            </button>
-                          </>
-                        )}
+                          <input
+                            className="ref-edit-input"
+                            value={editForm.name}
+                            onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                          />
+                        ) : employee.name}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="ref-cell">
+                        {isEditing ? (
+                          <input
+                            className="ref-edit-input"
+                            type="email"
+                            value={editForm.email}
+                            onChange={(e) => setEditForm((prev) => ({ ...prev, email: e.target.value }))}
+                          />
+                        ) : (employee.email || "-")}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="ref-cell">
+                        {isEditing ? (
+                          <select
+                            className="ref-edit-select"
+                            value={editForm.role}
+                            onChange={(e) => setEditForm((prev) => ({ ...prev, role: e.target.value }))}
+                          >
+                            <option value="Waiter">Waiter</option>
+                            <option value="Runner">Runner</option>
+                            <option value="Head Waiter">Head Waiter</option>
+                          </select>
+                        ) : (employee.position || "Waiter")}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="ref-cell">
+                        {isEditing ? (
+                          <input
+                            className="ref-edit-input"
+                            value={editForm.loginCode}
+                            onChange={(e) => setEditForm((prev) => ({ ...prev, loginCode: e.target.value }))}
+                          />
+                        ) : renderCode(employee)}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="ref-cell">
+                        <div className="ref-actions">
+                          {isEditing ? (
+                            <>
+                              <button type="button" className="ref-btn ref-btn-primary" onClick={() => saveEditing(employee.id)}>
+                                Save
+                              </button>
+                              <button type="button" className="ref-btn" onClick={cancelEditing}>
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button type="button" className="ref-btn" onClick={() => toggleCode(employee.id)}>
+                                {revealedCodes[employee.id] ? "Hide" : "Show"}
+                              </button>
+                              <button type="button" className="ref-btn" onClick={() => startEditing(employee)}>
+                                Edit
+                              </button>
+                              <button type="button" className="ref-btn ref-btn-danger" onClick={() => removeEmployee(employee.id)}>
+                                Remove
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -345,6 +330,7 @@ export default function RegisterEmployeeForm({
           </table>
         </div>
       </div>
+
     </div>
   );
 }
