@@ -23,7 +23,7 @@
 
 .schedule-title {
   font-size: 1.25rem;
-  font-weight: 600;
+  font-weight: 500;
   color: #1f2937;
   margin: 0;
   padding: 0;
@@ -181,7 +181,7 @@
   padding: 0.75rem;
   background: #f3f4f6;
   border-radius: 6px;
-  font-weight: 500;
+  font-weight: 300;
   color: #1f2937;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -297,6 +297,41 @@
   animation: slideUp 0.3s ease;
 }
 
+.work-employee-name.work-employee-clickable{
+  font-size: medium;
+}
+
+.jc-badge-partial{
+  font-size: 10px;
+}
+
+.green{
+  display:block;
+  border: 2px solid green;
+  background-color: rgb(8, 186, 8);
+  text-align: center;
+  margin-bottom: 2px;
+  width: 90px;
+  color:white;
+}
+
+.red{
+  border: 2px solid red;
+  background-color: rgb(226, 7, 7);
+  margin-top: 2px;
+  text-align: center;
+  display:block;
+  width: 90px;
+  color:white;
+}
+
+.jc-card-available{
+  width: 100px;
+}
+
+.jc-card-unavailable{
+  width: 100px;
+}
 @keyframes slideUp {
   from {
     transform: translateY(20px);

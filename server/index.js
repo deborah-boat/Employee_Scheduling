@@ -11,7 +11,7 @@ const {z, ZodError} = require ("zod");
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 5000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 
 // Initialize Prisma Client

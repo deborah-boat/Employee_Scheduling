@@ -1,15 +1,21 @@
 import { Fragment, useState } from "react";
-import { SHIFTS } from "../constants";
+import { SHIFTS, DAYS } from "../constants";
 
-const DAY_LABELS = {
-  Mon: "Mon 6/4",
-  Tue: "Tue 7/4",
-  Wed: "Wed 1/4",
-  Thu: "Thu 2/4",
-  Fri: "Fri 3/4",
-  Sat: "Sat 4/4",
-  Sun: "Sun 5/4"
-};
+const today = new Date();
+const day = today.getDay();
+const diff = day === 0 ? -6 : 1 - day;
+
+const weekStartDate = new Date(today);
+weekStartDate.setDate(today.getDate() + diff);
+
+const DAY_LABELS = DAYS.map((day, index) => {
+    if (weekStartDate) {
+      const date = new Date(weekStartDate);
+      date.setDate(weekStartDate.getDate() + index);
+      return { day, label: `${day} ${date.getDate()}/${date.getMonth() + 1}` };
+    }
+    return { day, label: day };
+  });
 
 const DAY_ORDER = ["Wed", "Thu", "Fri", "Sat", "Sun", "Mon", "Tue"];
 
@@ -20,9 +26,9 @@ const SHIFT_LABELS = {
 };
 
 const SHIFT_TIMES = {
-  morning: "7-15",
-  afternoon: "15-18",
-  night: "18-23"
+  morning: "07:00-16:00",
+  afternoon: "15:30-22:00",
+  night: "21:30-07:15"
 };
 
 function initials(name) {
@@ -94,10 +100,9 @@ export default function JobSchedule({
         <div className="job-grid-scroll">
         <div className="job-grid" role="grid">
           <div className="job-corner" />
-          {DAY_ORDER.map((day) => (
-            <div key={day} className="job-day-header">{DAY_LABELS[day]}</div>
+          {DAY_LABELS.map(({day, label}) => (
+            <div key={day} className="job-day-header">{label}</div>
           ))}
-
           {SHIFTS.map((shift) => (
             <Fragment key={shift}>
               <div className="job-shift-label">{SHIFT_LABELS[shift]}</div>

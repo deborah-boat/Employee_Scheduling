@@ -9,7 +9,7 @@ import LoginScreen from "./components/LoginScreen";
 import EmployerView from "./components/EmployerView";
 import EmployeeView from "./components/EmployeeView";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 const AUTH_STORAGE_KEY = "employee-auth";
 
 function getStoredAuth() {
@@ -52,7 +52,15 @@ export default function App() {
   });
 
   // availability[employeeId][day][shift] = "available" | "unavailable"
-  const [availability, setAvailability] = useState({});
+  const [availability, setAvailability] = useState({
+    emp1: {
+    Mon: {
+      morning: "preferred",
+      afternoon: "available",
+      night: "unavailable"
+    }
+    }
+  });
 
   // Reference Monday for the current week — used to compute real dates from day names
   const [weekStartDate] = useState(() => {
@@ -377,11 +385,12 @@ export default function App() {
               onAssignShift={handleAssignShift}
               selectedEmployeeId={selectedEmployeeId}
               setSelectedEmployeeId={setSelectedEmployeeId}
+              weekStartDate={weekStartDate}                                      
             />
           ) : (
             <EmployeeView
               employees={employees}
-              schedule={schedule}
+              schedule={schedule}                      
               availability={availability}
               onSetAvailability={handleSetAvailability}
               weekStartDate={weekStartDate}
@@ -390,5 +399,5 @@ export default function App() {
         </main>
       </div>
     </div>
-  );
+  );                        
 }
