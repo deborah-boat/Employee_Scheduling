@@ -2,12 +2,10 @@ const express = require ("express");
 const bcrypt = require ("bcrypt");
 const cors = require ("cors");
 const dotenv = require("dotenv");
-const bcrypt = require("bcrypt");
 const { randomUUID } = require("crypto");
 const { PrismaClient } = require("@prisma/client");
 const { logger, sanitizeObject } = require("./logger");
 const {z, ZodError} = require ("zod");
-const {PrismaClient} = require ("@prisma/client");
 
 // Load environment variables from .env
 dotenv.config();

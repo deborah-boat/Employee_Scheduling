@@ -9,9 +9,9 @@ const SHIFT_LABELS = {
 };
 
 const SHIFT_TIMES = {
-  morning: "07:00-16:00",
-  afternoon: "15:30-22:00",
-  night: "21:30-07:15"
+  morning: "7-15",
+  afternoon: "15-18",
+  night: "18-23"
 };
 
 // Background colour for each status in the grid cell

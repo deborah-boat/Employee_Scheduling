@@ -1,6 +1,10 @@
 import { useState } from "react";
 import "./index.css";
 import { DAYS, SHIFTS, SHIFT_IDS, MOCK_EMPLOYEES } from "./constants";
+import restaurant1 from "./assets/restaurant1.png";
+import employerImg from "./assets/Employer.png";
+import waiterImg from "./assets/Waiter.png";
+import logo from "./assets/logo.png";
 import LoginScreen from "./components/LoginScreen";
 import EmployerView from "./components/EmployerView";
 import EmployeeView from "./components/EmployeeView";
@@ -34,13 +38,6 @@ export default function App() {
   const [user, setUser] = useState(storedAuth.user);
   const [employees, setEmployees] = useState(MOCK_EMPLOYEES);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(1);
-
-  const welcomeName = user
-    ? String(user.username).split("@")[0].split(" ")[0]
-    : "";
-  const welcomeRole = user
-    ? String(user.role).toUpperCase()
-    : "";
 
   // schedule[day][shift] = employeeId | null
   const [schedule, setSchedule] = useState(() => {
@@ -129,6 +126,7 @@ export default function App() {
       } else {
         localStorage.removeItem(AUTH_STORAGE_KEY);
       }
+
       return { ok: true };
     } catch {
       return {
@@ -230,13 +228,30 @@ export default function App() {
 
   if (!role) {
     return (
-      <div className="app">
-        <div className="card narrow">
-          <h1>Sundsgården</h1>
-          <p>Select role to continue:</p>
-          <div className="role-buttons">
-            <button onClick={() => setRole("employer")}>Employer</button>
-            <button onClick={() => setRole("employee")}>Employee</button>
+      <div className="role-screen">
+        <div className="role-screen__left" style={{ backgroundImage: `url(${restaurant1})` }}>
+          <div className="role-screen__left-overlay">
+            <h1 className="role-screen__brand">Sundsgården</h1>
+            <p className="role-screen__tagline">Employee Scheduling System</p>
+          </div>
+        </div>
+        <div className="role-screen__right">
+          <p className="role-screen__title">Select your role to continue</p>
+          <div className="role-cards">
+            <button className="role-card" onClick={() => setRole("employer")}>
+              <img src={employerImg} alt="Employer" className="role-card__image" />
+              <div className="role-card__footer">
+                <span className="role-card__title">Employer</span>
+                <span className="role-card__btn">Click</span>
+              </div>
+            </button>
+            <button className="role-card" onClick={() => setRole("employee")}>
+              <img src={waiterImg} alt="Employee" className="role-card__image" />
+              <div className="role-card__footer">
+                <span className="role-card__title">Employee</span>
+                <span className="role-card__btn">Click</span>
+              </div>
+            </button>
           </div>
         </div>
       </div>
@@ -250,44 +265,130 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <div>Sundsgården – {user.role === "employer" ? "Employer" : "Employee"}</div>
-        <div>
-          <span className="username">{user.username}</span>
-          <button onClick={() => { localStorage.removeItem(AUTH_STORAGE_KEY); setUser(null); setRole(null); }}>Logout</button>
+        <div className="topbar__left">
+          <div className="topbar__brand">
+            <img src={logo} alt="Sundsgården Logo" className="topbar__logo" />
+          </div>
+        </div>
+
+        <div className="topbar__center">
+          <span className="topbar__role">{user.role === "employer" ? "Employer" : "Employee"}</span>
+        </div>
+
+        <div className="topbar__right">
+          <button className="topbar__notification" aria-label="Notifications">
+            <svg className="notification-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <span className="notification-badge">1</span>
+          </button>
+          <div className="topbar__user">
+            <div className="topbar__profile">
+              <img 
+                src={employerImg}
+                alt={user.username}
+                className="topbar__avatar"
+              />
+              <div className="topbar__info">
+                <span className="topbar__username">{user.username}</span>
+              </div>
+            </div>
+            <div className="topbar__menu">
+              <button 
+                className="topbar__menu-button"
+                aria-label="User menu"
+              >
+                ⋮
+              </button>
+              <div className="topbar__dropdown">
+                <div className="topbar__dropdown-header">
+                  <img 
+                    src={employerImg}
+                    alt={user.username}
+                    className="topbar__dropdown-avatar-image"
+                  />
+                  <div className="topbar__dropdown-info">
+                    <div className="topbar__dropdown-name">{user.username}</div>
+                    <div className="topbar__dropdown-role">{user.role === "employer" ? "HR Manager" : "Employee"}</div>
+                  </div>
+                </div>
+                <button 
+                  className="topbar__dropdown-logout"
+                  onClick={() => { 
+                    localStorage.removeItem(AUTH_STORAGE_KEY); 
+                    setUser(null); 
+                    setRole(null); 
+                  }}
+                >
+                  <svg className="logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                  </svg>
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="welcome-layout">
-        <section className="welcome-center">
-          <h1>Welcome, {welcomeName}!</h1>
-          <p>
-            You are logged in as <strong>{welcomeRole}</strong>.
-          </p>
-        </section>
-      </main>
+      <div className="app-container">
+        <aside className="welcome-card">
+          <div className="welcome-card__overlay">
+            <div className="welcome-card__header">
+              <div className="welcome-card__icon">🌙</div>
+              <p className="welcome-card__greeting">Welcome,</p>
+            </div>
+            
+            <div className="welcome-card__content">
+              <p className="welcome-card__text">You are logged as</p>
+              <p className="welcome-card__role">{user.role === "employer" ? "Employer" : "Employee"}</p>
+            </div>
+          </div>
 
-      {user.role === "employer" ? (
-        <EmployerView
-          employees={employees}
-          schedule={schedule}
-          availability={availability}
-          onRegisterEmployee={handleRegisterEmployee}
-          onUpdateEmployee={handleUpdateEmployee}
-          onDeleteEmployee={handleDeleteEmployee}
-          onAssignShift={handleAssignShift}
-          selectedEmployeeId={selectedEmployeeId}
-          setSelectedEmployeeId={setSelectedEmployeeId}
-          weekStartDate={weekStartDate}
-        />
-      ) : (
-        <EmployeeView
-          employees={employees}
-          schedule={schedule}
-          availability={availability}
-          onSetAvailability={handleSetAvailability}
-          weekStartDate={weekStartDate}
-        />
-      )}
+          <div className="welcome-card__background" style={{ backgroundImage: `url(${restaurant1})` }}>
+          </div>
+
+          <button className="welcome-card__settings" aria-label="Settings">
+            <svg className="settings-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v6m0 6v6"></path>
+              <path d="M4.22 4.22l4.24 4.24"></path>
+              <path d="M15.54 15.54l4.24 4.24"></path>
+              <path d="M1 12h6m6 0h6"></path>
+              <path d="M4.22 19.78l4.24-4.24"></path>
+              <path d="M15.54 8.46l4.24-4.24"></path>
+            </svg>
+            <span className="settings-label">Settings</span>
+          </button>
+        </aside>
+
+        <main className="app-main">
+          {user.role === "employer" ? (
+            <EmployerView
+              employees={employees}
+              schedule={schedule}
+              availability={availability}
+              onRegisterEmployee={handleRegisterEmployee}
+              onUpdateEmployee={handleUpdateEmployee}
+              onDeleteEmployee={handleDeleteEmployee}
+              onAssignShift={handleAssignShift}
+              selectedEmployeeId={selectedEmployeeId}
+              setSelectedEmployeeId={setSelectedEmployeeId}
+            />
+          ) : (
+            <EmployeeView
+              employees={employees}
+              schedule={schedule}
+              availability={availability}
+              onSetAvailability={handleSetAvailability}
+              weekStartDate={weekStartDate}
+            />
+          )}
+        </main>
+      </div>
     </div>
   );
 }
