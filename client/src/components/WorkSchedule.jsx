@@ -1,9 +1,13 @@
 import { Fragment, useMemo, useRef, useState } from "react";
 import { SHIFTS } from "../constants";
+import "../styles/WorkSchedule.css";
 
 // Short labels for days and months used in date display
 const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// Maximum number of employees allowed per shift
+const SHIFT_CAPACITY = { morning: 2, afternoon: 3, night: 3 };
 
 // Human-readable time ranges for each shift
 const SHIFT_TIMES = {
@@ -13,6 +17,7 @@ const SHIFT_TIMES = {
 };
 
 // Determine the availability status of an employee for a given day
+// eslint-disable-next-line no-unused-vars
 function getStatus(availabilityByDay = {}, assignedShift) {
   const availableShift = SHIFTS.find((shift) => availabilityByDay?.[shift] === "available");
   if (availableShift) {
@@ -129,101 +134,140 @@ export default function WorkSchedule({ employees, schedule, availability }) {
 
   return (
     <>
-    <div className="card work-card">
-      <h2 className="work-title">Work Schedule</h2>
+      <div className="ws-section">
 
-      <div className="work-controls">
-        <button type="button" className="work-control-today" onClick={goToToday}>Today</button>
-        <select className="work-control-week" defaultValue="Week">
-          <option value="Week">Week</option>
-        </select>
-        <button type="button" className="work-range-btn" aria-label="Previous week" onClick={goToPreviousWeek}>&lt;</button>
-        <button type="button" className="work-range-label" onClick={openDatePicker}>
-          {formatRangeLabel(weekStartDate)}
-        </button>
-        <button type="button" className="work-range-btn" aria-label="Next week" onClick={goToNextWeek}>&gt;</button>
-        <input
-          ref={dateInputRef}
-          className="work-date-picker"
-          type="date"
-          value={formatDateInputValue(weekStartDate)}
-          onChange={(e) => {
-            if (!e.target.value) return;
-            setWeekStartDate(new Date(`${e.target.value}T00:00:00`));
-          }}
-        />
-      </div>
+        {/* Heading */}
+        <div className="ws-heading">
+          <svg className="ws-heading-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+          <h2 className="ws-title">Work Schedule</h2>
+          <span className="ws-underline" />
+        </div>
 
-      <div className="work-grid" role="grid">
-        <div className="work-header-empty" />
-        {weekDays.map((day) => (
-          <div key={day.label} className="work-day-header">{day.label}</div>
-        ))}
+        {/* Controls */}
+        <div className="ws-controls">
+          <button type="button" className="ws-btn" onClick={goToToday}>Today</button>
+          <div className="ws-select-wrap">
+            <select className="ws-select" defaultValue="Week">
+              <option value="Week">Week</option>
+            </select>
+          </div>
+          <button type="button" className="ws-nav-btn" aria-label="Previous week" onClick={goToPreviousWeek}>&lt;</button>
+          <button type="button" className="ws-range-label" onClick={openDatePicker}>
+            {formatRangeLabel(weekStartDate)}
+          </button>
+          <button type="button" className="ws-nav-btn" aria-label="Next week" onClick={goToNextWeek}>&gt;</button>
+          <input
+            ref={dateInputRef}
+            className="ws-date-input"
+            type="date"
+            value={formatDateInputValue(weekStartDate)}
+            onChange={(e) => {
+              if (!e.target.value) return;
+              setWeekStartDate(new Date(`${e.target.value}T00:00:00`));
+            }}
+          />
+        </div>
 
-        {employees.map((employee, employeeIndex) => {
-          const showSickLeave = employeeIndex === 2;
+        {/* Grid — rows = shifts, cols = days */}
+        <div className="ws-grid-scroll">
+          <div className="ws-grid" role="grid">
 
-          return (
-            <Fragment key={employee.id}>
-              <div
-                className="work-employee-name work-employee-clickable"
-                role="button"
-                tabIndex={0}
-                title="Click to view availability"
-                onClick={() => setDetailEmployee(employee)}
-                onKeyDown={(e) => e.key === "Enter" && setDetailEmployee(employee)}
-              >
-                <span className="work-user-icon" aria-hidden="true">◉</span>
-                {employee.name}
-              </div>
+            {/* Corner + day headers */}
+            <div className="ws-cell ws-cell-header">Shifts/Days</div>
+            {weekDays.map((day) => (
+              <div key={day.label} className="ws-cell ws-cell-header">{day.label}</div>
+            ))}
 
-              {showSickLeave ? (
-                <div className="work-sick-leave">
-                  Sick leave
+            {/* One row per shift */}
+            {SHIFTS.map((shift) => (
+              <Fragment key={shift}>
+                <div className="ws-cell ws-cell-label">
+                  {shift === "morning" ? "Morning Shift" : shift === "afternoon" ? "Afternoon Shift" : "Night Shift"}
                 </div>
-              ) : (
-                weekDays.map((day) => {
-                  const assignedShift = SHIFTS.find((shift) => schedule[day.dayKey]?.[shift] === employee.id) || null;
-                  const status = getStatus(availability?.[employee.id]?.[day.dayKey], assignedShift);
+
+                {weekDays.map((day) => {
+                  // Support both single ID and array of IDs in schedule
+                  const raw = schedule[day.dayKey]?.[shift];
+                  const assignedIds = Array.isArray(raw) ? raw : raw ? [raw] : [];
+                  const capacity = SHIFT_CAPACITY[shift];
+                  const assignedEmployees = employees.filter((emp) => assignedIds.includes(emp.id));
+                  const isFull = assignedEmployees.length >= capacity;
+
+                  if (assignedEmployees.length === 0) {
+                    return (
+                      <div key={`${shift}-${day.label}`} className="ws-cell ws-cell-free">
+                        <span>Available</span>
+                        <span className="ws-capacity-badge">{assignedEmployees.length}/{capacity}</span>
+                      </div>
+                    );
+                  }
 
                   return (
-                    <div key={`${employee.id}-${day.label}`} className="work-cell">
-                      {status.type === "available" && <span className="work-available">{status.label}</span>}
-                      {status.type === "prefer" && <span className="work-tag prefer">{status.label}</span>}
-                      {status.type === "unavailable" && <span className="work-tag unavailable">{status.label}</span>}
+                    <div key={`${shift}-${day.label}`} className={`ws-cell ws-cell-assigned${isFull ? " ws-cell-full" : ""}`}>
+                      {assignedEmployees.map((emp) => (
+                        <div
+                          key={emp.id}
+                          className="ws-emp-card"
+                          role="button"
+                          tabIndex={0}
+                          title={emp.name}
+                          onClick={() => setDetailEmployee(emp)}
+                          onKeyDown={(e) => e.key === "Enter" && setDetailEmployee(emp)}
+                        >
+                          {emp.profilePicture ? (
+                            <img src={emp.profilePicture} alt={emp.name} className="ws-emp-avatar" />
+                          ) : (
+                            <div className="ws-emp-avatar-fallback">
+                              {emp.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                            </div>
+                          )}
+                          <span className="ws-emp-name">{emp.name.split(" ")[0]}</span>
+                        </div>
+                      ))}
+                      <span className={`ws-capacity-badge${isFull ? " ws-capacity-full" : ""}`}>
+                        {assignedEmployees.length}/{capacity}
+                      </span>
                     </div>
                   );
-                })
-              )}
-            </Fragment>
-          );
-        })}
-      </div>
-      <div className="work-helper-note">Click an employee name to view their availability details.</div>
-    </div>
-
-    {detailEmployee && (
-      <div className="ws-detail-overlay" onClick={() => setDetailEmployee(null)}>
-        <div className="ws-detail-modal" onClick={(e) => e.stopPropagation()}>
-          <div className="ws-detail-header">
-            <span className="ws-detail-name">{detailEmployee.name}</span>
-            <button className="ws-detail-close" onClick={() => setDetailEmployee(null)} aria-label="Close">✕</button>
-          </div>
-          <div className="ws-detail-subtitle">Weekly availability</div>
-          <div className="ws-detail-grid">
-            {weekDays.map((day) => {
-              const status = getDetailStatus(availability?.[detailEmployee.id]?.[day.dayKey]);
-              return (
-                <div key={day.label} className="ws-detail-row">
-                  <span className="ws-detail-day">{day.label}</span>
-                  <span className={`ws-detail-badge ws-detail-${status.type}`}>{status.text}</span>
-                </div>
-              );
-            })}
+                })}
+              </Fragment>
+            ))}
           </div>
         </div>
+
+        {/* Footnote */}
+        <p className="ws-footnote">Click an employee name to view their availability details.</p>
+
       </div>
-    )}
+
+      {/* Detail modal */}
+      {detailEmployee && (
+        <div className="ws-detail-overlay" onClick={() => setDetailEmployee(null)}>
+          <div className="ws-detail-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="ws-detail-header">
+              <span className="ws-detail-name">{detailEmployee.name}</span>
+              <button className="ws-detail-close" onClick={() => setDetailEmployee(null)} aria-label="Close">✕</button>
+            </div>
+            <div className="ws-detail-subtitle">Weekly availability</div>
+            <div className="ws-detail-grid">
+              {weekDays.map((day) => {
+                const status = getDetailStatus(availability?.[detailEmployee.id]?.[day.dayKey]);
+                return (
+                  <div key={day.label} className="ws-detail-row">
+                    <span className="ws-detail-day">{day.label}</span>
+                    <span className={`ws-detail-badge ws-detail-${status.type}`}>{status.text}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

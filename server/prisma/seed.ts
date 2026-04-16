@@ -18,6 +18,12 @@ async function seed() {
         password: "123456",
         role: "employee",
         displayName: "Ellen Johansson"
+      },
+      {
+        email: "oskar.nilsson@sundsgarden.se",
+        password: "567890",
+        role: "employee",
+        displayName: "Oskar Nilsson"
       }
     ];
   

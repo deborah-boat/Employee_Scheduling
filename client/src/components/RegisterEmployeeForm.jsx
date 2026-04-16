@@ -210,6 +210,9 @@ export default function RegisterEmployeeForm({
                 <option value="Head Waiter">Head Waiter</option>
               </select>
             </div>
+            <button type="submit" className="ref-btn-submit" onClick={handleSubmit}>
+              + Register
+            </button>
           </div>
         </form>
       </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import "./index.css";
 import { DAYS, SHIFTS, SHIFT_IDS, MOCK_EMPLOYEES } from "./constants";
 import restaurant1 from "./assets/restaurant1.png";
@@ -46,7 +46,7 @@ export default function App() {
       base[d] = {};
       SHIFTS.forEach((s) => (base[d][s] = null));
     });
-    base["Mon"].morning = 1;
+    base["Mon"].morning = [1, 2];
     base["Mon"].afternoon = 2;
     return base;
   });
@@ -64,6 +64,47 @@ export default function App() {
     monday.setHours(0, 0, 0, 0);
     return monday;
   });
+
+  // Inverse of SHIFT_IDS: { 1: "morning", 2: "afternoon", 3: "night" }
+  const SHIFT_NAMES = Object.fromEntries(Object.entries(SHIFT_IDS).map(([k, v]) => [v, k]));
+
+  // Load all employees' availability from the server and populate local state
+  const loadAllAvailability = useCallback(async () => {
+    const newAvailability = {};
+    await Promise.all(
+      employees.map(async (emp) => {
+        try {
+          const res = await fetch(`${API_BASE_URL}/availability/${emp.id}`);
+          if (!res.ok) return;
+          const records = await res.json();
+          records.forEach((record) => {
+            // Match the record's date to the current week's day key
+            const recordDateStr = new Date(record.date).toISOString().split("T")[0];
+            const dayIndex = DAYS.findIndex((_, i) => {
+              const d = new Date(weekStartDate);
+              d.setDate(d.getDate() + i);
+              return d.toISOString().split("T")[0] === recordDateStr;
+            });
+            if (dayIndex === -1) return;
+            const dayKey = DAYS[dayIndex];
+            const shiftName = SHIFT_NAMES[record.shift_id];
+            if (!shiftName) return;
+            if (!newAvailability[emp.id]) newAvailability[emp.id] = {};
+            if (!newAvailability[emp.id][dayKey]) newAvailability[emp.id][dayKey] = {};
+            newAvailability[emp.id][dayKey][shiftName] = record.status;
+          });
+        } catch {
+          // server unavailable — skip
+        }
+      })
+    );
+    setAvailability((prev) => ({ ...prev, ...newAvailability }));
+  }, [employees, weekStartDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reload availability from server whenever the user logs in
+  useEffect(() => {
+    if (user) loadAllAvailability();
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Convert a day abbreviation ("Mon", "Tue", ...) to a YYYY-MM-DD date string
   const dayToDate = (day) => {
@@ -385,6 +426,7 @@ export default function App() {
               availability={availability}
               onSetAvailability={handleSetAvailability}
               weekStartDate={weekStartDate}
+              user={user}
             />
           )}
         </main>

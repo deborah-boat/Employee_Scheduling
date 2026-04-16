@@ -262,6 +262,28 @@ thead .ref-cell {
   border-color: #d97706;
 }
 
+/* Submit button — sits in column 2 next to the role dropdown */
+.ref-btn-submit {
+  width: 100%;
+  height: 100%;
+  min-height: 46px;
+  padding: 0 12px;
+  background: #FBE073;
+  color: #7a5c00;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  min-height: 40px;
+}
+
+.ref-btn-submit:hover {
+  background: #f5d040;
+}
+
 /* Empty state */
 .ref-empty {
   text-align: center;

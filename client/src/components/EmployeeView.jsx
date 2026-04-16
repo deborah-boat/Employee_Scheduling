@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { DAYS, SHIFTS } from "../constants";
+import "../styles/EmployeeView.css";
 
 // Labels and time ranges shown in the grid and modal
 const SHIFT_LABELS = {
@@ -27,12 +28,18 @@ const SHIFT_MODAL_COLORS = {
   night: "#dbeafe"
 };
 
-export default function EmployeeView({ employees, availability, onSetAvailability, weekStartDate }) {
-  // Currently selected employee (demo—in production this would be the logged-in user)
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState(employees[0]?.id ?? null);
+export default function EmployeeView({ employees, availability, onSetAvailability, weekStartDate, user }) {
+  // Find the employee that matches the logged-in user by display name, fallback to first
+  const matchedId = employees.find((e) => e.name === user?.username)?.id ?? employees[0]?.id ?? null;
+  // eslint-disable-next-line no-unused-vars
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState(matchedId);
 
   // Modal state: which day is open, the top-level choice, and preferred shifts
   const [modalDay, setModalDay] = useState(null);
+  // Cancel-shift modal state: { day, shift } or null
+  const [cancelTarget, setCancelTarget] = useState(null);
+  // Day-all modal: set entire day available or unavailable
+  const [dayAllModal, setDayAllModal] = useState(null); // dayKey string or null
   const [topChoice, setTopChoice] = useState(null);       // "available_all" | "unavailable" | null
   const [preferredShifts, setPreferredShifts] = useState([]); // shifts toggled in "I prefer"
 
@@ -73,6 +80,25 @@ export default function EmployeeView({ employees, availability, onSetAvailabilit
     setPreferredShifts([]);
   };
 
+  // Open the cancel-shift confirmation modal
+  const openCancelModal = (dayKey, shift) => {
+    setCancelTarget({ day: dayKey, shift });
+  };
+
+  // Confirm clearing a single shift slot
+  const handleCancelShift = () => {
+    if (!cancelTarget) return;
+    onSetAvailability(employee.id, cancelTarget.day, cancelTarget.shift, "");
+    setCancelTarget(null);
+  };
+
+  // Set all shifts of a day to the same status
+  const handleDayAll = (status) => {
+    if (!dayAllModal) return;
+    SHIFTS.forEach((shift) => onSetAvailability(employee.id, dayAllModal, shift, status));
+    setDayAllModal(null);
+  };
+
   // Toggle a shift in the "I prefer" list
   const togglePreferredShift = (shift) => {
     setPreferredShifts((prev) =>
@@ -101,143 +127,180 @@ export default function EmployeeView({ employees, availability, onSetAvailabilit
     closeModal();
   };
 
-  const canConfirm = topChoice !== null || preferredShifts.length > 0;
+  const canConfirm = preferredShifts.length > 0;
 
   return (
-    <div className="content">
-      <div className="card av-card">
+    <>
+      <div className="ev-section">
 
-        {/* Header row: title + brand */}
-        <div className="av-header">
-          <h2 className="av-title">{employee.name}'s Availability</h2>
-          <div className="av-brand">
-            <span className="av-brand-title">Sundsgården</span>
-            <span className="av-brand-sub">HOTELL | KONFERENS</span>
+        {/* Heading */}
+        <div className="ev-heading">
+          <svg className="ev-heading-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+          </svg>
+          <h2 className="ev-title">Availability</h2>
+          <span className="ev-underline" />
+        </div>
+
+        {/* Employee name display */}
+        <div className="ev-name-wrap">
+          <input
+            className="ev-name-input"
+            type="text"
+            readOnly
+            value={employee.name}
+          />
+        </div>
+
+        {/* Grid */}
+        <div className="ev-grid-scroll">
+          <div className="ev-grid" role="grid">
+
+            {/* Corner + day headers */}
+            <div className="ev-cell ev-cell-header">Shifts/Days</div>
+            {dayColumns.map(({ dayKey, label }) => (
+              <div
+                key={dayKey}
+                className="ev-cell ev-cell-header ev-cell-clickable"
+                role="button"
+                tabIndex={0}
+                title="Click to set all shifts for this day"
+                onClick={() => setDayAllModal(dayKey)}
+                onKeyDown={(e) => e.key === "Enter" && setDayAllModal(dayKey)}
+              >{label}</div>
+            ))}
+
+            {/* Shift rows */}
+            {SHIFTS.map((shift) => (
+              <>
+                <div key={`${shift}-label`} className="ev-cell ev-cell-label">
+                  {SHIFT_LABELS[shift]}
+                </div>
+                {dayColumns.map(({ dayKey }) => {
+                  const status = availability[employee.id]?.[dayKey]?.[shift] || "";
+                  let cls = "ev-cell ev-cell-empty";
+                  let text = "";
+                  if (status === "available")   { cls = "ev-cell ev-cell-available";   text = "Available"; }
+                  if (status === "unavailable") { cls = "ev-cell ev-cell-unavailable"; text = "Unavailable"; }
+                  return status ? (
+                    <div
+                      key={`${shift}-${dayKey}`}
+                      className={cls + " ev-cell-clickable"}
+                      role="button"
+                      tabIndex={0}
+                      title="Click to cancel this shift"
+                      onClick={() => openCancelModal(dayKey, shift)}
+                      onKeyDown={(e) => e.key === "Enter" && openCancelModal(dayKey, shift)}
+                    >
+                      {text}
+                    </div>
+                  ) : (
+                    <div key={`${shift}-${dayKey}`} className="ev-cell" style={{ padding: 0, border: "1.5px solid #e5e7eb" }}>
+                      <button
+                        type="button"
+                        className="ev-choose-btn"
+                        onClick={() => openModal(dayKey)}
+                      >
+                        Choose<br />Availability
+                      </button>
+                    </div>
+                  );
+                })}
+              </>
+            ))}
+
           </div>
         </div>
 
-        {/* Demo employee selector */}
-        <div className="av-selector-row">
-          <label className="av-selector-label">
-            Viewing as:
-            <select
-              className="av-selector-select"
-              value={selectedEmployeeId || ""}
-              onChange={(e) => setSelectedEmployeeId(Number(e.target.value))}
-            >
-              {employees.map((item) => (
-                <option key={item.id} value={item.id}>{item.name}</option>
-              ))}
-            </select>
-          </label>
-        </div>
+        {/* Footnote */}
+        <p className="ev-footnote">
+          If you want to select all day <span className="ev-footnote-available">Available</span> or <span className="ev-footnote-unavailable">Unavailable</span>, click on the date — a modal will open to choose.
+        </p>
 
-        {/* Availability grid */}
-        <div className="av-grid-wrap">
-          <table className="av-table">
-            <thead>
-              <tr>
-                <th className="av-th av-th-empty" />
-                {dayColumns.map(({ dayKey, label }) => (
-                  <th key={dayKey} className="av-th av-th-day">{label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {SHIFTS.map((shift) => (
-                <tr key={shift}>
-                  <td className="av-td av-shift-label">{SHIFT_LABELS[shift]}</td>
-                  {dayColumns.map(({ dayKey }) => {
-                    const status = availability[employee.id]?.[dayKey]?.[shift] || "";
-                    return (
-                      <td
-                        key={dayKey}
-                        className="av-td av-cell"
-                        style={{ background: STATUS_COLORS[status] || "" }}
-                      >
-                        {status && (
-                          <span className="av-status-label">
-                            {status === "available" ? "Available" : "Unavailable"}
-                          </span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-
-              {/* "Choose availability" button row — one button per day */}
-              <tr className="av-picker-row">
-                <td className="av-td" />
-                {dayColumns.map(({ dayKey }) => (
-                  <td key={dayKey} className="av-td av-picker-cell">
-                    <button
-                      type="button"
-                      className="av-choose-btn"
-                      onClick={() => openModal(dayKey)}
-                    >
-                      Choose<br />availability
-                    </button>
-                  </td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
-        </div>
       </div>
 
-      {/* Availability modal */}
-      {modalDay && (
-        <div className="av-modal-overlay" onClick={closeModal}>
-          <div className="av-modal" onClick={(e) => e.stopPropagation()}>
-            <h3 className="av-modal-title">Select availability</h3>
-
-            {/* Top-level choice: available all day or unavailable */}
-            <div className="av-modal-top-row">
+      {/* Day-all modal */}
+      {dayAllModal && (
+        <div className="ev-modal-overlay" onClick={() => setDayAllModal(null)}>
+          <div className="ev-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="ev-modal-title">Set all shifts for {dayColumns.find((d) => d.dayKey === dayAllModal)?.label}</h3>
+            <p className="ev-cancel-modal-text">Choose a status to apply to all shifts on this day.</p>
+            <div className="ev-modal-top-row" style={{ marginBottom: 0 }}>
               <button
                 type="button"
-                className={`av-modal-top-btn av-available-btn${topChoice === "available_all" ? " active" : ""}`}
-                onClick={() => { setTopChoice("available_all"); setPreferredShifts([]); }}
+                className="ev-modal-top-btn ev-available-btn"
+                onClick={() => handleDayAll("available")}
               >
                 Available all day
               </button>
               <button
                 type="button"
-                className={`av-modal-top-btn av-unavailable-btn${topChoice === "unavailable" ? " active" : ""}`}
-                onClick={() => { setTopChoice("unavailable"); setPreferredShifts([]); }}
+                className="ev-modal-top-btn ev-unavailable-btn"
+                onClick={() => handleDayAll("unavailable")}
               >
                 Unavailable
               </button>
             </div>
+            <div className="ev-modal-actions" style={{ marginTop: 16 }}>
+              <button type="button" className="ev-modal-cancel" onClick={() => setDayAllModal(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
-            {/* Preferred shifts section */}
-            <p className="av-modal-prefer-label">I prefer:</p>
-            <div className="av-modal-shifts">
+      {/* Cancel-shift confirmation modal */}
+      {cancelTarget && (
+        <div className="ev-modal-overlay" onClick={() => setCancelTarget(null)}>
+          <div className="ev-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="ev-modal-title">Cancel shift?</h3>
+            <p className="ev-cancel-modal-text">
+              Do you want to remove your{" "}
+              <strong>
+                {availability[employee.id]?.[cancelTarget.day]?.[cancelTarget.shift] === "available"
+                  ? "Available"
+                  : "Unavailable"}
+              </strong>{" "}
+              status for <strong>{SHIFT_LABELS[cancelTarget.shift]}</strong> on{" "}
+              <strong>{dayColumns.find((d) => d.dayKey === cancelTarget.day)?.label}</strong>?
+            </p>
+            <div className="ev-modal-actions">
+              <button type="button" className="ev-modal-cancel" onClick={() => setCancelTarget(null)}>Keep it</button>
+              <button type="button" className="ev-modal-confirm" onClick={handleCancelShift}>Remove</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Availability modal */}
+      {modalDay && (
+        <div className="ev-modal-overlay" onClick={closeModal}>
+          <div className="ev-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="ev-modal-title">Select availability</h3>
+
+            <p className="ev-modal-prefer-label">I prefer:</p>
+            <div className="ev-modal-shifts">
               {SHIFTS.map((shift) => {
                 const isSelected = preferredShifts.includes(shift);
                 return (
                   <button
                     key={shift}
                     type="button"
-                    className={`av-modal-shift-btn${isSelected ? " selected" : ""}`}
+                    className={`ev-modal-shift-btn${isSelected ? " selected" : ""}`}
                     style={{ background: isSelected ? SHIFT_MODAL_COLORS[shift] : "#fff" }}
                     onClick={() => togglePreferredShift(shift)}
                   >
-                    <span className="av-modal-shift-name">{SHIFT_LABELS[shift]}</span>
-                    <span className="av-modal-shift-time">{SHIFT_TIMES[shift]}</span>
+                    <span className="ev-modal-shift-name">{SHIFT_LABELS[shift]}</span>
+                    <span className="ev-modal-shift-time">{SHIFT_TIMES[shift]}</span>
                   </button>
                 );
               })}
             </div>
 
-            {/* Cancel / Confirm */}
-            <div className="av-modal-actions">
-              <button type="button" className="av-modal-cancel" onClick={closeModal}>
-                Cancel
-              </button>
+            <div className="ev-modal-actions">
+              <button type="button" className="ev-modal-cancel" onClick={closeModal}>Cancel</button>
               <button
                 type="button"
-                className="av-modal-confirm"
+                className="ev-modal-confirm"
                 disabled={!canConfirm}
                 onClick={handleConfirm}
               >
@@ -247,7 +310,7 @@ export default function EmployeeView({ employees, availability, onSetAvailabilit
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
