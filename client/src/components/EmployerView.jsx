@@ -12,6 +12,7 @@ export default function EmployerView({
   onUpdateEmployee,
   onDeleteEmployee,
   onAssignShift,
+  onUnassignShift,
   selectedEmployeeId,
   setSelectedEmployeeId
 }) {
@@ -51,6 +52,7 @@ export default function EmployerView({
           schedule={schedule}
           availability={availability}
           onAssignShift={onAssignShift}
+          onUnassignShift={onUnassignShift}
           selectedEmployeeId={selectedEmployeeId}
           setSelectedEmployeeId={setSelectedEmployeeId}
         />

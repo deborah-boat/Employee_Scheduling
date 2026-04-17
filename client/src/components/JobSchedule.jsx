@@ -40,6 +40,7 @@ export default function JobSchedule({
   schedule,
   availability,
   onAssignShift,
+  onUnassignShift,
   selectedEmployeeId,
   setSelectedEmployeeId
 }) {
@@ -48,6 +49,10 @@ export default function JobSchedule({
   const [dontShowAgain, setDontShowAgain] = useState(false);
   // { [day]: { [shift]: true } } — tracks employer-declined slots
   const [declinedShifts, setDeclinedShifts] = useState({});
+  // { day, shift, employee } — for the manage (cancel/swap) modal
+  const [manageRequest, setManageRequest] = useState(null);
+  // id of employee to swap with
+  const [swapTargetId, setSwapTargetId] = useState("");;
 
   const handleCellClick = (day, shift) => {
     const raw = schedule[day]?.[shift] ?? null;
@@ -56,8 +61,13 @@ export default function JobSchedule({
     const employee = employees.find((e) => e.id === selectedEmployeeId);
     const avStatus = availability?.[selectedEmployeeId]?.[day]?.[shift] ?? null;
 
-    // If the selected employee is already in this slot, do nothing
-    if (isSelectedAssigned) return;
+    // If the selected employee is already in this slot, open manage modal
+    if (isSelectedAssigned) {
+      const employee = employees.find((e) => e.id === selectedEmployeeId);
+      setManageRequest({ day, shift, employee });
+      setSwapTargetId("");
+      return;
+    }
 
     const otherEmployee = employees.find((e) => assignedIds.includes(e.id) && e.id !== selectedEmployeeId) || null;
     if (otherEmployee) {
@@ -92,6 +102,24 @@ export default function JobSchedule({
       [confirmRequest.day]: { ...(prev[confirmRequest.day] || {}), [confirmRequest.shift]: true }
     }));
     closeModal();
+  };
+
+  const closeManageModal = () => {
+    setManageRequest(null);
+    setSwapTargetId("");
+  };
+
+  const handleCancelShift = () => {
+    if (!manageRequest) return;
+    onUnassignShift(manageRequest.day, manageRequest.shift, manageRequest.employee.id);
+    closeManageModal();
+  };
+
+  const handleSwapShift = () => {
+    if (!manageRequest || !swapTargetId) return;
+    onUnassignShift(manageRequest.day, manageRequest.shift, manageRequest.employee.id);
+    onAssignShift(manageRequest.day, manageRequest.shift, Number(swapTargetId));
+    closeManageModal();
   };
 
   return (
@@ -332,6 +360,94 @@ export default function JobSchedule({
               <div className="jsm-actions">
                 <button type="button" className="jsm-btn-decline" onClick={handleDecline}>Decline</button>
                 <button type="button" className="jsm-btn-accept" onClick={handleAccept}>Accept</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Manage modal — cancel or swap a confirmed shift */}
+      {manageRequest && (
+        <div className="jsm-overlay" onClick={closeManageModal}>
+          <div className="jsm-modal" onClick={(e) => e.stopPropagation()}>
+
+            {/* Top bar */}
+            <div className="jsm-top">
+              <div className="jsm-icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+              </div>
+              <button type="button" className="jsm-close" onClick={closeManageModal} aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            <h3 className="jsm-title">Manage Shift</h3>
+            <p className="jsm-subtitle">
+              {SHIFT_LABELS[manageRequest.shift]} · {SHIFT_TIMES[manageRequest.shift]} · {DAY_LABELS[manageRequest.day]}
+            </p>
+
+            {/* Assigned employee */}
+            <div className="jsm-emp-row">
+              {manageRequest.employee.profilePicture ? (
+                <img src={manageRequest.employee.profilePicture} alt="" className="jsm-emp-avatar" />
+              ) : (
+                <div className="jsm-emp-avatar-fallback">{initials(manageRequest.employee.name)}</div>
+              )}
+              <div className="jsm-emp-info">
+                <span className="jsm-emp-name">{manageRequest.employee.name}</span>
+                <span className="jsm-emp-shift">{SHIFT_LABELS[manageRequest.shift]} {SHIFT_TIMES[manageRequest.shift]}</span>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="jsm-divider" />
+
+            {/* Cancel shift */}
+            <div className="jsm-manage-section">
+              <p className="jsm-manage-label">Remove from shift</p>
+              <button type="button" className="jsm-btn-cancel-shift" onClick={handleCancelShift}>
+                Cancel shift
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div className="jsm-divider" />
+
+            {/* Swap with another employee */}
+            <div className="jsm-manage-section">
+              <p className="jsm-manage-label">Swap with another employee</p>
+              <div className="jsm-swap-select-row">
+                <div className="jsm-swap-select-wrap">
+                  <select
+                    className="jsm-swap-select"
+                    value={swapTargetId}
+                    onChange={(e) => setSwapTargetId(e.target.value)}
+                  >
+                    <option value="">Select employee…</option>
+                    {employees
+                      .filter((e) => e.id !== manageRequest.employee.id)
+                      .map((e) => (
+                        <option key={e.id} value={e.id}>{e.name}</option>
+                      ))}
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  className="jsm-btn-accept"
+                  disabled={!swapTargetId}
+                  onClick={handleSwapShift}
+                >
+                  Swap
+                </button>
               </div>
             </div>
 

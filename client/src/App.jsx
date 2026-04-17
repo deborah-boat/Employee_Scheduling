@@ -230,6 +230,18 @@ export default function App() {
     });
   };
 
+  const handleUnassignShift = (day, shift, employeeId) => {
+    setSchedule((prev) => {
+      const current = prev[day]?.[shift];
+      const currentArr = Array.isArray(current) ? current : current != null ? [current] : [];
+      const filtered = currentArr.filter((id) => id !== employeeId);
+      return {
+        ...prev,
+        [day]: { ...prev[day], [shift]: filtered.length === 0 ? null : filtered }
+      };
+    });
+  };
+
   const handleAssignShift = (day, shift, employeeId) => {
     setSchedule((prev) => {
       const current = prev[day]?.[shift];
@@ -435,6 +447,7 @@ export default function App() {
               onUpdateEmployee={handleUpdateEmployee}
               onDeleteEmployee={handleDeleteEmployee}
               onAssignShift={handleAssignShift}
+              onUnassignShift={handleUnassignShift}
               selectedEmployeeId={selectedEmployeeId}
               setSelectedEmployeeId={setSelectedEmployeeId}
             />
