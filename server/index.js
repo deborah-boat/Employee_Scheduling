@@ -97,65 +97,76 @@ app.post("/api/login", async (req, res) => {
       message: "role must be either employee or employer"
     });
   }
-  
-  // Look up the user by email and role
-  const user = await prisma.user.findFirst({
-    where: {
-      email: normalizedEmail,
-      role: normalizedRole
+
+  try {
+    // Look up the user by email and role
+    const user = await prisma.user.findFirst({
+      where: {
+        email: normalizedEmail,
+        role: normalizedRole
+      }
+    });
+
+    if (!user) {
+      logger.warn("login_failed_user_not_found", {
+        requestId: req.requestId,
+        email: normalizedEmail,
+        role: normalizedRole
+      });
+
+      return res.status(401).json({
+        message: "Invalid credentials"
+      });
     }
-  });
 
-  if (!user) {
-    logger.warn("login_failed_user_not_found", {
+    // Compare the provided password against the stored hash
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      logger.warn("login_failed_invalid_password", {
+        requestId: req.requestId,
+        email: normalizedEmail,
+        role: normalizedRole,
+        userId: user.id
+      });
+
+      return res.status(401).json({
+        message: "Invalid credentials"
+      });
+    }
+
+    logger.info("login_success", {
       requestId: req.requestId,
-      email: normalizedEmail,
-      role: normalizedRole
-    });
-
-    return res.status(401).json({
-      message: "Invalid credentials"
-    });
-  }
-
-  // Compare the provided password against the stored hash
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-
-  if (!isPasswordValid) {
-    logger.warn("login_failed_invalid_password", {
-      requestId: req.requestId,
-      email: normalizedEmail,
-      role: normalizedRole,
-      userId: user.id
-    });
-
-    return res.status(401).json({
-      message: "Invalid credentials"
-    });
-  }
-
-  logger.info("login_success", {
-    requestId: req.requestId,
-    userId: user.id,
-    email: user.email,
-    role: user.role,
-    rememberMe: Boolean(rememberMe)
-  });
-
-  return res.status(200).json({
-    message: "Login successful",
-    token: `demo-token-${user.id}`,
-    session: {
-      rememberMe: Boolean(rememberMe),
-      expiresIn: Boolean(rememberMe) ? "30d" : "session"
-    },
-    user: {
-      id: user.id,
+      userId: user.id,
       email: user.email,
       role: user.role,
-      displayName: user.displayName
-    }
-  });
+      rememberMe: Boolean(rememberMe)
+    });
+
+    return res.status(200).json({
+      message: "Login successful",
+      token: `demo-token-${user.id}`,
+      session: {
+        rememberMe: Boolean(rememberMe),
+        expiresIn: Boolean(rememberMe) ? "30d" : "session"
+      },
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        displayName: user.displayName
+      }
+    });
+  } catch (err) {
+    logger.error("login_error", {
+      requestId: req.requestId,
+      error: err.message
+    });
+
+    return res.status(500).json({
+      message: "Internal server error. Please try again."
+    });
+  }
 });
 
 // GET /employees – list all employees with their shifts (employee and employer)
