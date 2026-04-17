@@ -103,8 +103,10 @@ export default function App() {
 
   // Reload availability from server whenever the user logs in
   useEffect(() => {
-    if (user) loadAllAvailability();
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (user) {
+      loadAllAvailability();
+    }
+  }, [user, loadAllAvailability]);
 
   // Convert a day abbreviation ("Mon", "Tue", ...) to a YYYY-MM-DD date string
   const dayToDate = (day) => {
