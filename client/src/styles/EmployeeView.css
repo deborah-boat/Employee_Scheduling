@@ -198,6 +198,63 @@
   color: #b45309;
 }
 
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .ev-section {
+    padding: 20px 18px;
+  }
+
+  .ev-name-wrap {
+    max-width: 100%;
+  }
+
+  .ev-selector-label {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .ev-grid {
+    grid-template-columns: 100px repeat(7, 1fr);
+    gap: 5px;
+    min-width: 580px;
+  }
+
+  .ev-cell {
+    font-size: 0.72rem;
+    padding: 6px 4px;
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 520px) {
+  .ev-section {
+    padding: 16px 14px;
+  }
+
+  .ev-heading {
+    margin-bottom: 16px;
+  }
+
+  .ev-grid {
+    grid-template-columns: 85px repeat(7, 1fr);
+    gap: 4px;
+    min-width: 500px;
+  }
+
+  .ev-cell {
+    font-size: 0.65rem;
+    padding: 5px 3px;
+    min-height: 36px;
+    border-radius: 7px;
+  }
+
+  .ev-choose-btn {
+    font-size: 0.65rem;
+    min-height: 36px;
+    padding: 4px 2px;
+  }
+}
+
 /* "Choose Availability" row — no label cell border */
 .ev-cell-picker-empty {
   background: transparent;
