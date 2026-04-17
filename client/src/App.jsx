@@ -216,7 +216,13 @@ export default function App() {
       DAYS.forEach((day) => {
         next[day] = {};
         SHIFTS.forEach((shift) => {
-          next[day][shift] = prev[day][shift] === employeeId ? null : prev[day][shift];
+          const val = prev[day][shift];
+          if (Array.isArray(val)) {
+            const filtered = val.filter((id) => id !== employeeId);
+            next[day][shift] = filtered.length === 0 ? null : filtered;
+          } else {
+            next[day][shift] = val === employeeId ? null : val;
+          }
         });
       });
 
@@ -225,10 +231,16 @@ export default function App() {
   };
 
   const handleAssignShift = (day, shift, employeeId) => {
-    setSchedule((prev) => ({
-      ...prev,
-      [day]: { ...prev[day], [shift]: employeeId }
-    }));
+    setSchedule((prev) => {
+      const current = prev[day]?.[shift];
+      const currentArr = Array.isArray(current) ? current : current != null ? [current] : [];
+      if (currentArr.includes(employeeId)) return prev;
+      const newArr = [...currentArr, employeeId];
+      return {
+        ...prev,
+        [day]: { ...prev[day], [shift]: newArr }
+      };
+    });
   };
 
   const handleSetAvailability = async (employeeId, day, shift, value) => {
@@ -246,9 +258,14 @@ export default function App() {
 
     // If the employee is now unavailable and was assigned to this slot, free it
     setSchedule((prev) => {
-      const current = prev[day]?.[shift] ?? null;
-      if (value === "unavailable" && current === employeeId) {
-        return { ...prev, [day]: { ...prev[day], [shift]: null } };
+      const current = prev[day]?.[shift];
+      if (value === "unavailable") {
+        if (Array.isArray(current) && current.includes(employeeId)) {
+          const filtered = current.filter((id) => id !== employeeId);
+          return { ...prev, [day]: { ...prev[day], [shift]: filtered.length === 0 ? null : filtered } };
+        } else if (current === employeeId) {
+          return { ...prev, [day]: { ...prev[day], [shift]: null } };
+        }
       }
       return prev;
     });

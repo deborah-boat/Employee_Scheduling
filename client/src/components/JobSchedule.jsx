@@ -50,13 +50,18 @@ export default function JobSchedule({
   const [declinedShifts, setDeclinedShifts] = useState({});
 
   const handleCellClick = (day, shift) => {
-    const assignedId = schedule[day]?.[shift] ?? null;
-    const assignedEmployee = employees.find((e) => e.id === assignedId) || null;
+    const raw = schedule[day]?.[shift] ?? null;
+    const assignedIds = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
+    const isSelectedAssigned = assignedIds.includes(selectedEmployeeId);
     const employee = employees.find((e) => e.id === selectedEmployeeId);
     const avStatus = availability?.[selectedEmployeeId]?.[day]?.[shift] ?? null;
 
-    if (assignedEmployee) {
-      setConfirmRequest({ mode: "replace", day, shift, employee, avStatus, currentEmployee: assignedEmployee });
+    // If the selected employee is already in this slot, do nothing
+    if (isSelectedAssigned) return;
+
+    const otherEmployee = employees.find((e) => assignedIds.includes(e.id) && e.id !== selectedEmployeeId) || null;
+    if (otherEmployee) {
+      setConfirmRequest({ mode: "replace", day, shift, employee, avStatus, currentEmployee: otherEmployee });
     } else {
       setConfirmRequest({ mode: "assign", day, shift, employee, avStatus });
     }
@@ -136,8 +141,9 @@ export default function JobSchedule({
               <Fragment key={shift}>
                 <div className="js-cell js-cell-label">{SHIFT_LABELS[shift]}</div>
                 {DAY_ORDER.map((day) => {
-                  const assignedId = schedule[day]?.[shift] ?? null;
-                  const assignedEmployee = employees.find((e) => e.id === assignedId) || null;
+                  const raw = schedule[day]?.[shift] ?? null;
+                  const assignedIds = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
+                  const isSelectedAssigned = assignedIds.includes(selectedEmployeeId);
                   const avStatus = availability?.[selectedEmployeeId]?.[day]?.[shift] ?? null;
                   const isDeclined = declinedShifts[day]?.[shift] ?? false;
 
@@ -160,7 +166,7 @@ export default function JobSchedule({
                     );
                   }
 
-                  if (assignedEmployee) {
+                  if (isSelectedAssigned) {
                     return (
                       <button
                         key={`${day}-${shift}`}
