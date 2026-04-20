@@ -28,7 +28,7 @@ const SHIFT_MODAL_COLORS = {
   night: "#dbeafe"
 };
 
-export default function EmployeeView({ employees, availability, onSetAvailability, weekStartDate, user }) {
+export default function EmployeeView({ employees, schedule, availability, onSetAvailability, weekStartDate, user }) {
   // Find the employee that matches the logged-in user by display name, fallback to first
   const matchedId = employees.find((e) => e.name === user?.username)?.id ?? employees[0]?.id ?? null;
   // eslint-disable-next-line no-unused-vars
@@ -177,6 +177,23 @@ export default function EmployeeView({ employees, availability, onSetAvailabilit
                   {SHIFT_LABELS[shift]}
                 </div>
                 {dayColumns.map(({ dayKey }) => {
+                  const raw = schedule?.[dayKey]?.[shift] ?? null;
+                  const assignedIds = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
+                  const isScheduled = assignedIds.includes(employee.id);
+
+                  if (isScheduled) {
+                    return (
+                      <div key={`${shift}-${dayKey}`} className="ev-cell ev-cell-scheduled">
+                        Schedule
+                        <span className="ev-cell-check" aria-hidden="true">
+                          <svg viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <polyline points="1,4 4,7 9,1" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </span>
+                      </div>
+                    );
+                  }
+
                   const status = availability[employee.id]?.[dayKey]?.[shift] || "";
                   let cls = "ev-cell ev-cell-empty";
                   let text = "";

@@ -154,6 +154,35 @@
   border-color: #fca5a5;
 }
 
+.ev-cell-scheduled {
+  background: #bbf7d0;
+  color: #166534;
+  font-weight: 600;
+  border-color: #86efac;
+  position: relative;
+}
+
+.ev-cell-check {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: clamp(14px, 1.5vw, 18px);
+  height: clamp(14px, 1.5vw, 18px);
+  background: #16a34a;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.ev-cell-check svg {
+  width: 65%;
+  height: 65%;
+  display: block;
+}
+
 /* Clickable status cells */
 .ev-cell-clickable {
   cursor: pointer;
