@@ -184,7 +184,7 @@ export default function EmployeeView({ employees, schedule, availability, onSetA
                   if (isScheduled) {
                     return (
                       <div key={`${shift}-${dayKey}`} className="ev-cell ev-cell-scheduled">
-                        Schedule
+                        Scheduled
                         <span className="ev-cell-check" aria-hidden="true">
                           <svg viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <polyline points="1,4 4,7 9,1" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
