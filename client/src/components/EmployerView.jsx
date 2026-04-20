@@ -14,7 +14,8 @@ export default function EmployerView({
   onAssignShift,
   onUnassignShift,
   selectedEmployeeId,
-  setSelectedEmployeeId
+  setSelectedEmployeeId,
+  weekStartDate
 }) {
   const [tab, setTab] = useState("employees");
 
@@ -55,6 +56,7 @@ export default function EmployerView({
           onUnassignShift={onUnassignShift}
           selectedEmployeeId={selectedEmployeeId}
           setSelectedEmployeeId={setSelectedEmployeeId}
+          weekStartDate={weekStartDate}
         />
       )}
       {tab === "workschedule" && (

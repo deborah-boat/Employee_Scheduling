@@ -1,18 +1,6 @@
 import { Fragment, useState } from "react";
-import { SHIFTS } from "../constants";
+import { DAYS, SHIFTS } from "../constants";
 import "../styles/JobSchedule.css";
-
-const DAY_LABELS = {
-  Mon: "Mon 6/4",
-  Tue: "Tue 7/4",
-  Wed: "Wed 1/4",
-  Thu: "Thu 2/4",
-  Fri: "Fri 3/4",
-  Sat: "Sat 4/4",
-  Sun: "Sun 5/4"
-};
-
-const DAY_ORDER = ["Wed", "Thu", "Fri", "Sat", "Sun", "Mon", "Tue"];
 
 const SHIFT_LABELS = {
   morning: "Morning shift",
@@ -42,7 +30,8 @@ export default function JobSchedule({
   onAssignShift,
   onUnassignShift,
   selectedEmployeeId,
-  setSelectedEmployeeId
+  setSelectedEmployeeId,
+  weekStartDate
 }) {
   // { mode: "assign"|"replace", day, shift, employee, avStatus, currentEmployee? }
   const [confirmRequest, setConfirmRequest] = useState(null);
@@ -52,7 +41,17 @@ export default function JobSchedule({
   // { day, shift, employee } — for the manage (cancel/swap) modal
   const [manageRequest, setManageRequest] = useState(null);
   // id of employee to swap with
-  const [swapTargetId, setSwapTargetId] = useState("");;
+  const [swapTargetId, setSwapTargetId] = useState("");
+
+  // Build day columns dynamically from the current week start
+  const dayColumns = DAYS.map((dayKey, index) => {
+    if (weekStartDate) {
+      const date = new Date(weekStartDate);
+      date.setDate(weekStartDate.getDate() + index);
+      return { dayKey, label: `${dayKey} ${date.getDate()}/${date.getMonth() + 1}` };
+    }
+    return { dayKey, label: dayKey };
+  });
 
   const handleCellClick = (day, shift) => {
     const raw = schedule[day]?.[shift] ?? null;
@@ -161,14 +160,14 @@ export default function JobSchedule({
 
             {/* Corner */}
             <div className="js-cell js-cell-header">Shifts/Days</div>
-            {DAY_ORDER.map((day) => (
-              <div key={day} className="js-cell js-cell-header">{DAY_LABELS[day]}</div>
+            {dayColumns.map(({ dayKey, label }) => (
+              <div key={dayKey} className="js-cell js-cell-header">{label}</div>
             ))}
 
             {SHIFTS.map((shift) => (
               <Fragment key={shift}>
                 <div className="js-cell js-cell-label">{SHIFT_LABELS[shift]}</div>
-                {DAY_ORDER.map((day) => {
+                {dayColumns.map(({ dayKey: day }) => {
                   const raw = schedule[day]?.[shift] ?? null;
                   const assignedIds = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
                   const isSelectedAssigned = assignedIds.includes(selectedEmployeeId);
@@ -392,7 +391,7 @@ export default function JobSchedule({
 
             <h3 className="jsm-title">Manage Shift</h3>
             <p className="jsm-subtitle">
-              {SHIFT_LABELS[manageRequest.shift]} · {SHIFT_TIMES[manageRequest.shift]} · {DAY_LABELS[manageRequest.day]}
+              {SHIFT_LABELS[manageRequest.shift]} · {SHIFT_TIMES[manageRequest.shift]} · {dayColumns.find(c => c.dayKey === manageRequest.day)?.label ?? manageRequest.day}
             </p>
 
             {/* Assigned employee */}

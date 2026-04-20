@@ -11,6 +11,20 @@ import EmployeeView from "./components/EmployeeView";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 const AUTH_STORAGE_KEY = "employee-auth";
+const SCHEDULE_STORAGE_KEY = "employee-schedule";
+
+// Inverse of SHIFT_IDS: { 1: "morning", 2: "afternoon", 3: "night" }
+const SHIFT_NAMES = Object.fromEntries(Object.entries(SHIFT_IDS).map(([k, v]) => [v, k]));
+
+function getStoredSchedule() {
+  try {
+    const raw = localStorage.getItem(SCHEDULE_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
 
 function getStoredAuth() {
   try {
@@ -39,15 +53,15 @@ export default function App() {
   const [employees, setEmployees] = useState(MOCK_EMPLOYEES);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(1);
 
-  // schedule[day][shift] = employeeId | null
+  // schedule[day][shift] = employeeId[] | null  — persisted in localStorage
   const [schedule, setSchedule] = useState(() => {
+    const stored = getStoredSchedule();
+    if (stored) return stored;
     const base = {};
     DAYS.forEach((d) => {
       base[d] = {};
       SHIFTS.forEach((s) => (base[d][s] = null));
     });
-    base["Mon"].morning = [1, 2];
-    base["Mon"].afternoon = 2;
     return base;
   });
 
@@ -64,9 +78,6 @@ export default function App() {
     monday.setHours(0, 0, 0, 0);
     return monday;
   });
-
-  // Inverse of SHIFT_IDS: { 1: "morning", 2: "afternoon", 3: "night" }
-  const SHIFT_NAMES = Object.fromEntries(Object.entries(SHIFT_IDS).map(([k, v]) => [v, k]));
 
   // Load all employees' availability from the server and populate local state
   const loadAllAvailability = useCallback(async () => {
@@ -100,6 +111,15 @@ export default function App() {
     );
     setAvailability((prev) => ({ ...prev, ...newAvailability }));
   }, [employees, weekStartDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-save the schedule to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(schedule));
+    } catch {
+      // storage full or unavailable
+    }
+  }, [schedule]);
 
   // Reload availability from server whenever the user logs in
   useEffect(() => {
@@ -230,7 +250,7 @@ export default function App() {
     });
   };
 
-  const handleUnassignShift = (day, shift, employeeId) => {
+  const handleUnassignShift = async (day, shift, employeeId) => {
     setSchedule((prev) => {
       const current = prev[day]?.[shift];
       const currentArr = Array.isArray(current) ? current : current != null ? [current] : [];
@@ -240,9 +260,19 @@ export default function App() {
         [day]: { ...prev[day], [shift]: filtered.length === 0 ? null : filtered }
       };
     });
+
+    try {
+      await fetch(`${API_BASE_URL}/schedule`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", "x-role": user?.role || "employer" },
+        body: JSON.stringify({ employeeId, date: dayToDate(day), shift_id: SHIFT_IDS[shift] })
+      });
+    } catch {
+      // server unreachable — local state already updated
+    }
   };
 
-  const handleAssignShift = (day, shift, employeeId) => {
+  const handleAssignShift = async (day, shift, employeeId) => {
     setSchedule((prev) => {
       const current = prev[day]?.[shift];
       const currentArr = Array.isArray(current) ? current : current != null ? [current] : [];
@@ -253,6 +283,16 @@ export default function App() {
         [day]: { ...prev[day], [shift]: newArr }
       };
     });
+
+    try {
+      await fetch(`${API_BASE_URL}/schedule`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-role": user?.role || "employer" },
+        body: JSON.stringify({ employeeId, date: dayToDate(day), shift_id: SHIFT_IDS[shift] })
+      });
+    } catch {
+      // server unreachable — local state already updated
+    }
   };
 
   const handleSetAvailability = async (employeeId, day, shift, value) => {
@@ -450,6 +490,7 @@ export default function App() {
               onUnassignShift={handleUnassignShift}
               selectedEmployeeId={selectedEmployeeId}
               setSelectedEmployeeId={setSelectedEmployeeId}
+              weekStartDate={weekStartDate}
             />
           ) : (
             <EmployeeView

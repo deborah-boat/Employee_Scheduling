@@ -69,7 +69,8 @@ const availabilitySchema = z.object({
 // Define Zod schema for schedule assignment
 const scheduleSchema = z.object({
   employeeId: z.coerce.number().int(),
-  shiftInstanceId: z.coerce.number().int()
+  date: z.string(),
+  shift_id: z.coerce.number().int()
 })
 
 // Health check — used to verify the server is reachable
@@ -327,20 +328,59 @@ app.put("/schedule", async (req, res) => {
       return;
     }
 
-    const { employeeId, shiftInstanceId } = scheduleSchema.parse(req.body);
-    const assignment = await prisma.employeeShift.create({
-      data: {
-        employeeId,
-        shiftInstanceId
-      },
-      include: {
-        employee: true,
-        shiftInstance: { include: { shift: true } }
-      }
+    const { employeeId, date, shift_id } = scheduleSchema.parse(req.body);
+
+    // Find or create the shift instance for this date + shift
+    let shiftInstance = await prisma.shiftInstances.findFirst({
+      where: { shift_id, date: new Date(date) }
+    });
+    if (!shiftInstance) {
+      shiftInstance = await prisma.shiftInstances.create({
+        data: { shift_id, date: new Date(date) }
+      });
+    }
+
+    // Create assignment only if it doesn't already exist
+    const existing = await prisma.employeeShift.findFirst({
+      where: { employeeId, shiftInstanceId: shiftInstance.id }
+    });
+    if (!existing) {
+      await prisma.employeeShift.create({
+        data: { employeeId, shiftInstanceId: shiftInstance.id }
+      });
+    }
+
+    res.status(200).json({ employeeId, shiftInstanceId: shiftInstance.id });
+
+  } catch (error) {
+    if (error instanceof ZodError) { res.status(400).json(error.flatten()); return; }
+    res.status(500).send(error instanceof Error ? error.message : "Unknown error");
+  }
+});
+
+// DELETE /schedule – employer removes an employee from a shift
+app.delete("/schedule", async (req, res) => {
+  try {
+    const role = req.headers["x-role"];
+    if (role !== "employer") {
+      res.status(403).send("Forbidden: employer access only");
+      return;
+    }
+
+    const { employeeId, date, shift_id } = scheduleSchema.parse(req.body);
+
+    const shiftInstance = await prisma.shiftInstances.findFirst({
+      where: { shift_id, date: new Date(date) }
+    });
+    if (!shiftInstance) {
+      return res.status(204).send();
+    }
+
+    await prisma.employeeShift.deleteMany({
+      where: { employeeId, shiftInstanceId: shiftInstance.id }
     });
 
-    res.json(assignment);
-
+    res.status(204).send();
   } catch (error) {
     if (error instanceof ZodError) { res.status(400).json(error.flatten()); return; }
     res.status(500).send(error instanceof Error ? error.message : "Unknown error");
