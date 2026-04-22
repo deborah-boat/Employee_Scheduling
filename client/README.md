@@ -8,7 +8,7 @@
 
 ---
 
-<img src="src/assets/appview.png" alt="App Preview" width="800" />
+![App Preview](src/assets/appview.png)
 
 ---
 
