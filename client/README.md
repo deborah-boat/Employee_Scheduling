@@ -8,7 +8,7 @@
 
 ---
 
-![App Preview](src/assets/restaurant1.png)
+<img src="src/assets/appview.png" alt="App Preview" width="800" />
 
 ---
 
@@ -96,4 +96,7 @@ Employee_Scheduling/
 ## Authors
 
 - **Backend Course Student** — Full-stack development
+    - Deborah Boateng
+    - Gláucia Silva Bierwagen
+    - Jane Lehtola
 
