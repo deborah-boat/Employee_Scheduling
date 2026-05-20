@@ -6,6 +6,7 @@ const { randomUUID } = require("crypto");
 const { PrismaClient } = require("@prisma/client");
 const { logger, sanitizeObject } = require("./logger");
 const {z, ZodError} = require ("zod");
+const { authMiddleware } = require("./Auth/auth");
 
 // Load environment variables from .env
 dotenv.config();
@@ -13,6 +14,15 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
+
+const ALLOWED_LOCAL_ORIGIN_PATTERN =
+  /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/;
+
+const ALLOWED_ORIGINS = new Set([
+  CLIENT_ORIGIN,
+  "http://localhost:5173",
+  "http://127.0.0.1:5173"
+]);
 
 // Initialize Prisma Client
 const prisma = new PrismaClient();
@@ -25,9 +35,39 @@ if (!databaseUrl) {
 }
 
 app.use(cors({
-  origin: CLIENT_ORIGIN
+  origin: (origin, callback) => {
+    // Allow same-origin and non-browser clients (e.g. curl, Postman)
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (ALLOWED_ORIGINS.has(origin) || ALLOWED_LOCAL_ORIGIN_PATTERN.test(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    logger.warn("cors_blocked_origin", {
+      origin
+    });
+
+    callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true
 }));
 app.use(express.json());
+app.use(authMiddleware);
+
+// Return a clear client error when request JSON is malformed.
+app.use((err, _req, res, next) => {
+  if (err && err.type === "entity.parse.failed") {
+    return res.status(400).json({
+      message: "Invalid JSON in request body"
+    });
+  }
+
+  next(err);
+});
 
 app.use((req, res, next) => {
   req.requestId = req.get("x-request-id") || randomUUID();
@@ -75,6 +115,63 @@ const scheduleSchema = z.object({
 // Health check — used to verify the server is reachable
 app.get("/api/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
+});
+
+// Auth login — starts Auth0 redirect flow
+app.get("/api/auth/login", (req, res) => {
+  const requestedRole = String(req.query.role || "").toLowerCase();
+  const role = requestedRole === "employer" || requestedRole === "employee"
+    ? requestedRole
+    : "employee";
+  const returnTo = `${CLIENT_ORIGIN}/?role=${encodeURIComponent(role)}`;
+
+  return res.oidc.login({
+    returnTo
+  });
+});
+
+// Auth session — returns current Auth0 session user for the SPA
+app.get("/api/auth/session", (req, res) => {
+  if (!req.oidc.isAuthenticated()) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+
+  const requestedRole = String(req.query.role || "").toLowerCase();
+  const role = requestedRole === "employer" || requestedRole === "employee"
+    ? requestedRole
+    : "employee";
+
+  const oidcUser = req.oidc.user || {};
+  return res.status(200).json({
+    user: {
+      id: oidcUser.sub,
+      email: oidcUser.email || "",
+      role,
+      displayName: oidcUser.name || oidcUser.nickname || oidcUser.email || "User"
+    }
+  });
+});
+
+// Auth logout — clears local session and logs out from Auth0
+app.get("/api/auth/logout", (req, res) => {
+  const returnTo = process.env.AUTH0_POST_LOGOUT_REDIRECT || CLIENT_ORIGIN;
+  return res.oidc.logout({ returnTo });
+});
+
+// API logout — supports SPA/demo sessions (POST) and falls back to OIDC logout
+app.post("/api/auth/logout", (req, res) => {
+  try {
+    if (req.oidc && typeof req.oidc.isAuthenticated === "function" && req.oidc.isAuthenticated()) {
+      const returnTo = process.env.AUTH0_POST_LOGOUT_REDIRECT || CLIENT_ORIGIN;
+      // If an OIDC session exists, redirect the browser to the OIDC logout endpoint.
+      return res.oidc.logout({ returnTo });
+    }
+  } catch (err) {
+    // ignore and continue to return a JSON response for API clients
+  }
+
+  // No OIDC session — respond OK for SPA to clear local state.
+  return res.status(200).json({ message: "Logged out" });
 });
 
 // Login — validates credentials and returns user info
@@ -349,13 +446,23 @@ app.put("/schedule", async (req, res) => {
 
 // Global error handler
 app.use((err, _req, res, _next) => {
+  const statusCode = Number.isInteger(err?.statusCode)
+    ? err.statusCode
+    : Number.isInteger(err?.status)
+      ? err.status
+      : 500;
+
   logger.error("unhandled_error", {
     requestId: _req?.requestId,
     message: err.message,
     stack: err.stack
   });
 
-  res.status(500).json({ message: "Internal server error" });
+  res.status(statusCode >= 400 && statusCode < 600 ? statusCode : 500).json({
+    message: statusCode >= 400 && statusCode < 500
+      ? (err.message || "Request failed")
+      : "Internal server error"
+  });
 });
 
 // Disconnect Prisma when the process exits
