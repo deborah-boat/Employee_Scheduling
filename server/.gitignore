@@ -3,7 +3,7 @@ node_modules
 /generated/prisma
 
 .env
-
-.env.example
+.env.*
+!.env.example
 
 /.vscode
