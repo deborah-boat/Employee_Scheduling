@@ -416,6 +416,14 @@
     padding: 20px 18px;
   }
 
+  .ws-heading {
+    margin-bottom: 18px;
+  }
+
+  .ws-controls {
+    gap: 6px;
+  }
+
   .ws-grid {
     grid-template-columns: 110px repeat(7, 1fr);
     gap: 5px;
@@ -441,6 +449,11 @@
   .ws-btn, .ws-range-label {
     padding: 7px 12px;
     font-size: 0.8rem;
+  }
+
+  .ws-nav-btn {
+    width: 30px;
+    height: 30px;
   }
 
   .ws-grid {

@@ -302,6 +302,10 @@ thead .ref-cell {
     grid-template-columns: 1fr 1fr;
     gap: 10px;
   }
+
+  .ref-heading {
+    margin-bottom: 18px;
+  }
 }
 
 @media (max-width: 520px) {
@@ -326,6 +330,15 @@ thead .ref-cell {
 
   .ref-btn {
     padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+
+  .ref-actions {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .ref-btn-submit {
     font-size: 0.75rem;
   }
 }

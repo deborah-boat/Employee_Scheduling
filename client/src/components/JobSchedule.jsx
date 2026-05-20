@@ -1,18 +1,6 @@
 import { Fragment, useState } from "react";
-import { SHIFTS } from "../constants";
+import { DAYS, SHIFTS } from "../constants";
 import "../styles/JobSchedule.css";
-
-const DAY_LABELS = {
-  Mon: "Mon 6/4",
-  Tue: "Tue 7/4",
-  Wed: "Wed 1/4",
-  Thu: "Thu 2/4",
-  Fri: "Fri 3/4",
-  Sat: "Sat 4/4",
-  Sun: "Sun 5/4"
-};
-
-const DAY_ORDER = ["Wed", "Thu", "Fri", "Sat", "Sun", "Mon", "Tue"];
 
 const SHIFT_LABELS = {
   morning: "Morning shift",
@@ -40,23 +28,49 @@ export default function JobSchedule({
   schedule,
   availability,
   onAssignShift,
+  onUnassignShift,
   selectedEmployeeId,
-  setSelectedEmployeeId
+  setSelectedEmployeeId,
+  weekStartDate
 }) {
   // { mode: "assign"|"replace", day, shift, employee, avStatus, currentEmployee? }
   const [confirmRequest, setConfirmRequest] = useState(null);
   const [dontShowAgain, setDontShowAgain] = useState(false);
   // { [day]: { [shift]: true } } — tracks employer-declined slots
   const [declinedShifts, setDeclinedShifts] = useState({});
+  // { day, shift, employee } — for the manage (cancel/swap) modal
+  const [manageRequest, setManageRequest] = useState(null);
+  // id of employee to swap with
+  const [swapTargetId, setSwapTargetId] = useState("");
+
+  // Build day columns dynamically from the current week start
+  const dayColumns = DAYS.map((dayKey, index) => {
+    if (weekStartDate) {
+      const date = new Date(weekStartDate);
+      date.setDate(weekStartDate.getDate() + index);
+      return { dayKey, label: `${dayKey} ${date.getDate()}/${date.getMonth() + 1}` };
+    }
+    return { dayKey, label: dayKey };
+  });
 
   const handleCellClick = (day, shift) => {
-    const assignedId = schedule[day]?.[shift] ?? null;
-    const assignedEmployee = employees.find((e) => e.id === assignedId) || null;
+    const raw = schedule[day]?.[shift] ?? null;
+    const assignedIds = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
+    const isSelectedAssigned = assignedIds.includes(selectedEmployeeId);
     const employee = employees.find((e) => e.id === selectedEmployeeId);
     const avStatus = availability?.[selectedEmployeeId]?.[day]?.[shift] ?? null;
 
-    if (assignedEmployee) {
-      setConfirmRequest({ mode: "replace", day, shift, employee, avStatus, currentEmployee: assignedEmployee });
+    // If the selected employee is already in this slot, open manage modal
+    if (isSelectedAssigned) {
+      const employee = employees.find((e) => e.id === selectedEmployeeId);
+      setManageRequest({ day, shift, employee });
+      setSwapTargetId("");
+      return;
+    }
+
+    const otherEmployee = employees.find((e) => assignedIds.includes(e.id) && e.id !== selectedEmployeeId) || null;
+    if (otherEmployee) {
+      setConfirmRequest({ mode: "replace", day, shift, employee, avStatus, currentEmployee: otherEmployee });
     } else {
       setConfirmRequest({ mode: "assign", day, shift, employee, avStatus });
     }
@@ -87,6 +101,24 @@ export default function JobSchedule({
       [confirmRequest.day]: { ...(prev[confirmRequest.day] || {}), [confirmRequest.shift]: true }
     }));
     closeModal();
+  };
+
+  const closeManageModal = () => {
+    setManageRequest(null);
+    setSwapTargetId("");
+  };
+
+  const handleCancelShift = () => {
+    if (!manageRequest) return;
+    onUnassignShift(manageRequest.day, manageRequest.shift, manageRequest.employee.id);
+    closeManageModal();
+  };
+
+  const handleSwapShift = () => {
+    if (!manageRequest || !swapTargetId) return;
+    onUnassignShift(manageRequest.day, manageRequest.shift, manageRequest.employee.id);
+    onAssignShift(manageRequest.day, manageRequest.shift, Number(swapTargetId));
+    closeManageModal();
   };
 
   return (
@@ -128,16 +160,17 @@ export default function JobSchedule({
 
             {/* Corner */}
             <div className="js-cell js-cell-header">Shifts/Days</div>
-            {DAY_ORDER.map((day) => (
-              <div key={day} className="js-cell js-cell-header">{DAY_LABELS[day]}</div>
+            {dayColumns.map(({ dayKey, label }) => (
+              <div key={dayKey} className="js-cell js-cell-header">{label}</div>
             ))}
 
             {SHIFTS.map((shift) => (
               <Fragment key={shift}>
                 <div className="js-cell js-cell-label">{SHIFT_LABELS[shift]}</div>
-                {DAY_ORDER.map((day) => {
-                  const assignedId = schedule[day]?.[shift] ?? null;
-                  const assignedEmployee = employees.find((e) => e.id === assignedId) || null;
+                {dayColumns.map(({ dayKey: day }) => {
+                  const raw = schedule[day]?.[shift] ?? null;
+                  const assignedIds = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
+                  const isSelectedAssigned = assignedIds.includes(selectedEmployeeId);
                   const avStatus = availability?.[selectedEmployeeId]?.[day]?.[shift] ?? null;
                   const isDeclined = declinedShifts[day]?.[shift] ?? false;
 
@@ -160,7 +193,7 @@ export default function JobSchedule({
                     );
                   }
 
-                  if (assignedEmployee) {
+                  if (isSelectedAssigned) {
                     return (
                       <button
                         key={`${day}-${shift}`}
@@ -326,6 +359,94 @@ export default function JobSchedule({
               <div className="jsm-actions">
                 <button type="button" className="jsm-btn-decline" onClick={handleDecline}>Decline</button>
                 <button type="button" className="jsm-btn-accept" onClick={handleAccept}>Accept</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Manage modal — cancel or swap a confirmed shift */}
+      {manageRequest && (
+        <div className="jsm-overlay" onClick={closeManageModal}>
+          <div className="jsm-modal" onClick={(e) => e.stopPropagation()}>
+
+            {/* Top bar */}
+            <div className="jsm-top">
+              <div className="jsm-icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+              </div>
+              <button type="button" className="jsm-close" onClick={closeManageModal} aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            <h3 className="jsm-title">Manage Shift</h3>
+            <p className="jsm-subtitle">
+              {SHIFT_LABELS[manageRequest.shift]} · {SHIFT_TIMES[manageRequest.shift]} · {dayColumns.find(c => c.dayKey === manageRequest.day)?.label ?? manageRequest.day}
+            </p>
+
+            {/* Assigned employee */}
+            <div className="jsm-emp-row">
+              {manageRequest.employee.profilePicture ? (
+                <img src={manageRequest.employee.profilePicture} alt="" className="jsm-emp-avatar" />
+              ) : (
+                <div className="jsm-emp-avatar-fallback">{initials(manageRequest.employee.name)}</div>
+              )}
+              <div className="jsm-emp-info">
+                <span className="jsm-emp-name">{manageRequest.employee.name}</span>
+                <span className="jsm-emp-shift">{SHIFT_LABELS[manageRequest.shift]} {SHIFT_TIMES[manageRequest.shift]}</span>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="jsm-divider" />
+
+            {/* Cancel shift */}
+            <div className="jsm-manage-section">
+              <p className="jsm-manage-label">Remove from shift</p>
+              <button type="button" className="jsm-btn-cancel-shift" onClick={handleCancelShift}>
+                Cancel shift
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div className="jsm-divider" />
+
+            {/* Swap with another employee */}
+            <div className="jsm-manage-section">
+              <p className="jsm-manage-label">Swap with another employee</p>
+              <div className="jsm-swap-select-row">
+                <div className="jsm-swap-select-wrap">
+                  <select
+                    className="jsm-swap-select"
+                    value={swapTargetId}
+                    onChange={(e) => setSwapTargetId(e.target.value)}
+                  >
+                    <option value="">Select employee…</option>
+                    {employees
+                      .filter((e) => e.id !== manageRequest.employee.id)
+                      .map((e) => (
+                        <option key={e.id} value={e.id}>{e.name}</option>
+                      ))}
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  className="jsm-btn-accept"
+                  disabled={!swapTargetId}
+                  onClick={handleSwapShift}
+                >
+                  Swap
+                </button>
               </div>
             </div>
 

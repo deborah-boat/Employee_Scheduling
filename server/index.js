@@ -1,6 +1,3 @@
-const express = require ("express");
-const bcrypt = require ("bcrypt");
-const cors = require ("cors");
 const dotenv = require("dotenv");
 const { randomUUID } = require("crypto");
 const { PrismaClient } = require("@prisma/client");
@@ -11,7 +8,11 @@ const { authMiddleware } = require("./Auth/auth");
 // Load environment variables from .env
 dotenv.config();
 
-const app = express();
+const { createApp, prisma } = require("./app");
+const { logger } = require("./logger");
+
+const app = createApp(prisma);
+
 const PORT = process.env.PORT || 4000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 
@@ -30,8 +31,9 @@ const prisma = new PrismaClient();
 // Read the database URL from environment
 const databaseUrl = process.env.DATABASE_URL;
 // Crash early if the database URL is missing
+const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
-  throw new Error('DATABASE_URL is not set');
+  throw new Error("DATABASE_URL is not set");
 }
 
 app.use(cors({
@@ -471,8 +473,6 @@ process.on("beforeExit", async () => {
 });
 
 app.listen(PORT, () => {
-  logger.info("server_started", {
-    port: PORT,
-    clientOrigin: CLIENT_ORIGIN
-  });
+  logger.info("server_started", { port: PORT, clientOrigin: CLIENT_ORIGIN });
 });
+
