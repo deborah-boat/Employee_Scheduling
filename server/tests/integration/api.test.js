@@ -1,83 +1,797 @@
-// These are integration tests — they test how multiple parts work together
-// Instead of testing one function in isolation, here I send a real HTTP request
-// and check that the route, middleware, and response all work correctly end to end
+// These are integration tests — they send real HTTP requests through the Express
+// router and check that routes, middleware, and responses all work end-to-end.
+// Prisma and bcrypt are injected as mocks so no real database is needed.
+// No vi.mock() is used here — all dependencies are passed via createApp(prisma, deps).
 
-// vitest is the test runner (describe, it, expect, vi)
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock firebase-admin so tests don't need real Firebase credentials.
-// 'test-token' is accepted as valid; anything else is rejected.
-vi.mock('../../firebaseAdmin.js', () => ({
-  default: {
-    auth: () => ({
-      verifyIdToken: async (token) => {
-        if (token === 'test-token') return { uid: 'test-uid' };
-        throw new Error('Invalid token');
-      },
-    }),
-  },
-}));
-
-// supertest lets me send HTTP requests to the Express app without starting a real server
+// supertest sends HTTP requests directly to the Express app — no real server needed
 import request from 'supertest';
 
-// I import the app itself so supertest can send requests directly to it
-import app from '../../server.js';
+// createApp(prisma, deps) builds the app with whatever prisma / bcrypt we pass
+import { createApp } from '../../app.js';
 
-describe('API Integration', () => {
+// ─── Mock dependencies ────────────────────────────────────────────────────────
 
-  // Test 1 — GET /gyms is a public route, so anyone should be able to access it
-  it('GET /gyms returns 200 and an array', async () => {
-    // Send a GET request to /gyms and wait for the response
-    const res = await request(app).get('/gyms');
+const mockBcrypt = { compare: vi.fn() };
 
-    // 200 means OK — the server responded successfully
+const mockPrisma = {
+  user: {
+    findFirst: vi.fn()
+  },
+  employee: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    delete: vi.fn()
+  },
+  availability: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn()
+  },
+  shiftInstances: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn()
+  },
+  employeeShift: {
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    deleteMany: vi.fn()
+  },
+  $disconnect: vi.fn()
+};
+
+// Build the app once — all tests share this instance
+const testApp = createApp(mockPrisma, { bcrypt: mockBcrypt });
+
+// Reset all stubs before each test so return values don't bleed across tests
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockPrisma.employee.findMany.mockResolvedValue([]);
+  mockPrisma.employee.findFirst.mockResolvedValue(null);
+  mockPrisma.employee.delete.mockResolvedValue({});
+  mockPrisma.availability.findMany.mockResolvedValue([]);
+  mockPrisma.availability.findFirst.mockResolvedValue(null);
+  mockPrisma.shiftInstances.findMany.mockResolvedValue([]);
+  mockPrisma.shiftInstances.findFirst.mockResolvedValue(null);
+  mockPrisma.employeeShift.findFirst.mockResolvedValue(null);
+  mockPrisma.employeeShift.create.mockResolvedValue({});
+  mockPrisma.employeeShift.deleteMany.mockResolvedValue({});
+});
+
+// ─── Health check ─────────────────────────────────────────────────────────────
+
+describe('GET /api/health', () => {
+  it('returns 200 and { status: "ok" }', async () => {
+    const res = await request(testApp).get('/api/health');
     expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: 'ok' });
+  });
+});
 
-    // The response body should be an array (the list of gyms)
+// ─── Login ────────────────────────────────────────────────────────────────────
+
+describe('POST /api/login', () => {
+  it('returns 400 when required fields are missing', async () => {
+    const res = await request(testApp).post('/api/login').send({ email: 'a@b.com' });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/required/i);
+  });
+
+  it('returns 400 when role is not "employee" or "employer"', async () => {
+    const res = await request(testApp)
+      .post('/api/login')
+      .send({ email: 'a@b.com', password: 'secret', role: 'admin' });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/role/i);
+  });
+
+  it('returns 401 when the user does not exist in the database', async () => {
+    mockPrisma.user.findFirst.mockResolvedValue(null);
+    const res = await request(testApp)
+      .post('/api/login')
+      .send({ email: 'ghost@example.com', password: 'secret', role: 'employee' });
+    expect(res.status).toBe(401);
+    expect(res.body.message).toBe('Invalid credentials');
+  });
+
+  it('returns 401 when the password is wrong', async () => {
+    mockPrisma.user.findFirst.mockResolvedValue({
+      id: 1, email: 'ellen@example.com', role: 'employee',
+      password: '$hashed', displayName: 'Ellen'
+    });
+    mockBcrypt.compare.mockResolvedValue(false);
+    const res = await request(testApp)
+      .post('/api/login')
+      .send({ email: 'ellen@example.com', password: 'wrong', role: 'employee' });
+    expect(res.status).toBe(401);
+    expect(res.body.message).toBe('Invalid credentials');
+  });
+
+  it('returns 200 with user info on successful login', async () => {
+    mockPrisma.user.findFirst.mockResolvedValue({
+      id: 1, email: 'ellen@example.com', role: 'employee',
+      password: '$hashed', displayName: 'Ellen Johansson'
+    });
+    mockBcrypt.compare.mockResolvedValue(true);
+    const res = await request(testApp)
+      .post('/api/login')
+      .send({ email: 'ellen@example.com', password: 'correct', role: 'employee' });
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Login successful');
+    expect(res.body.user.email).toBe('ellen@example.com');
+    expect(res.body.user.role).toBe('employee');
+  });
+});
+
+// ─── Employees ────────────────────────────────────────────────────────────────
+
+describe('GET /employees', () => {
+  it('returns 200 and an array', async () => {
+    mockPrisma.employee.findMany.mockResolvedValue([
+      { id: 1, name: 'Ellen Johansson', email: 'ellen@example.com', shifts: [] }
+    ]);
+    const res = await request(testApp).get('/employees');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body[0].name).toBe('Ellen Johansson');
+  });
+});
+
+describe('POST /employees', () => {
+  it('returns 403 when x-role header is not "employer"', async () => {
+    const res = await request(testApp)
+      .post('/employees')
+      .send({ name: 'New Worker', email: 'new@example.com' });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 400 when the request body fails validation', async () => {
+    const res = await request(testApp)
+      .post('/employees')
+      .set('x-role', 'employer')
+      .send({ name: 'No Email' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 201 with the created employee when input is valid', async () => {
+    const created = { id: 6, name: 'Sara Berg', email: 'sara@example.com' };
+    mockPrisma.employee.create.mockResolvedValue(created);
+    const res = await request(testApp)
+      .post('/employees')
+      .set('x-role', 'employer')
+      .send({ name: 'Sara Berg', email: 'sara@example.com' });
+    expect(res.status).toBe(201);
+    expect(res.body.name).toBe('Sara Berg');
+  });
+});
+
+describe('DELETE /employees/:id', () => {
+  it('returns 403 when x-role is not "employer"', async () => {
+    const res = await request(testApp).delete('/employees/1');
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 400 when the id is not a valid number', async () => {
+    const res = await request(testApp)
+      .delete('/employees/abc')
+      .set('x-role', 'employer');
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 204 when the employee is deleted successfully', async () => {
+    const res = await request(testApp)
+      .delete('/employees/1')
+      .set('x-role', 'employer');
+    expect(res.status).toBe(204);
+  });
+});
+
+// ─── Availability ─────────────────────────────────────────────────────────────
+
+describe('GET /availability/:id', () => {
+  it('returns 400 when the id is not a valid number', async () => {
+    const res = await request(testApp).get('/availability/abc');
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 200 and the availability array for a valid employee id', async () => {
+    mockPrisma.availability.findMany.mockResolvedValue([
+      { id: 1, employeeId: 1, shift_id: 1, date: '2026-05-20', status: 'available' }
+    ]);
+    const res = await request(testApp).get('/availability/1');
+    expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
+});
 
-  // Test 2 — Requesting a gym that doesn't exist should return 404 Not Found
-  it('GET /gyms/:id returns 404 for an unknown ID', async () => {
-    // id 999 doesn't exist in our data
-    const res = await request(app).get('/gyms/999');
-
-    // The server should tell us the resource was not found
-    expect(res.status).toBe(404);
+describe('PUT /availability/:id', () => {
+  it('returns 400 when the id is not a valid number', async () => {
+    const res = await request(testApp)
+      .put('/availability/xyz')
+      .send({ date: '2026-05-20', shift_id: 1, status: 'available' });
+    expect(res.status).toBe(400);
   });
 
-  // Test 3 — POST /gyms is a protected route, so without a token it should be blocked
-  it('POST /gyms without a token returns 401', async () => {
-    // I'm not setting an Authorization header on purpose to test the protection
-    const res = await request(app).post('/gyms').send({ name: 'Test Gym' });
+  it('returns 400 when the body fails Zod validation', async () => {
+    const res = await request(testApp)
+      .put('/availability/1')
+      .send({ date: '2026-05-20', status: 'available' });
+    expect(res.status).toBe(400);
+  });
 
-    // 401 means Unauthorized — the middleware should have blocked this request
+  it('returns 200 and creates a new availability record when none exists', async () => {
+    const record = { id: 1, employeeId: 1, shift_id: 1, date: '2026-05-20', status: 'available' };
+    mockPrisma.availability.findFirst.mockResolvedValue(null);
+    mockPrisma.availability.create.mockResolvedValue(record);
+    const res = await request(testApp)
+      .put('/availability/1')
+      .send({ date: '2026-05-20', shift_id: 1, status: 'available' });
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('available');
+  });
+});
+
+// ─── Schedule ─────────────────────────────────────────────────────────────────
+
+describe('GET /schedule', () => {
+  it('returns 200 and an array', async () => {
+    const res = await request(testApp).get('/schedule');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+});
+
+describe('PUT /schedule', () => {
+  it('returns 403 when x-role is not "employer"', async () => {
+    const res = await request(testApp)
+      .put('/schedule')
+      .send({ employeeId: 1, date: '2026-05-20', shift_id: 1 });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 400 when the body fails Zod validation', async () => {
+    const res = await request(testApp)
+      .put('/schedule')
+      .set('x-role', 'employer')
+      .send({ employeeId: 1, date: '2026-05-20' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 200 when shift is assigned successfully', async () => {
+    const instance = { id: 10, shift_id: 1, date: '2026-05-20' };
+    mockPrisma.shiftInstances.findFirst.mockResolvedValue(instance);
+    const res = await request(testApp)
+      .put('/schedule')
+      .set('x-role', 'employer')
+      .send({ employeeId: 1, date: '2026-05-20', shift_id: 1 });
+    expect(res.status).toBe(200);
+    expect(res.body.employeeId).toBe(1);
+  });
+});
+
+describe('DELETE /schedule', () => {
+  it('returns 403 when x-role is not "employer"', async () => {
+    const res = await request(testApp)
+      .delete('/schedule')
+      .send({ employeeId: 1, date: '2026-05-20', shift_id: 1 });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 204 when the shift instance does not exist (nothing to delete)', async () => {
+    mockPrisma.shiftInstances.findFirst.mockResolvedValue(null);
+    const res = await request(testApp)
+      .delete('/schedule')
+      .set('x-role', 'employer')
+      .send({ employeeId: 1, date: '2026-05-20', shift_id: 1 });
+    expect(res.status).toBe(204);
+  });
+
+  it('returns 204 after successfully removing the assignment', async () => {
+    mockPrisma.shiftInstances.findFirst.mockResolvedValue({ id: 10 });
+    const res = await request(testApp)
+      .delete('/schedule')
+      .set('x-role', 'employer')
+      .send({ employeeId: 1, date: '2026-05-20', shift_id: 1 });
+    expect(res.status).toBe(204);
+  });
+});
+
+
+// ─── Health check ─────────────────────────────────────────────────────────────
+
+describe('GET /api/health', () => {
+  it('returns 200 and { status: "ok" }', async () => {
+    const res = await request(testApp).get('/api/health');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: 'ok' });
+  });
+});
+
+// ─── Login ────────────────────────────────────────────────────────────────────
+
+describe('POST /api/login', () => {
+  it('returns 400 when required fields are missing', async () => {
+    // Sending only email — password and role are absent
+    const res = await request(testApp).post('/api/login').send({ email: 'a@b.com' });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/required/i);
+  });
+
+  it('returns 400 when role is not "employee" or "employer"', async () => {
+    const res = await request(testApp)
+      .post('/api/login')
+      .send({ email: 'a@b.com', password: 'secret', role: 'admin' });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/role/i);
+  });
+
+  it('returns 401 when the user does not exist in the database', async () => {
+    // prisma.user.findFirst returns null — no matching account
+    mockPrisma.user.findFirst.mockResolvedValue(null);
+    const res = await request(testApp)
+      .post('/api/login')
+      .send({ email: 'ghost@example.com', password: 'secret', role: 'employee' });
     expect(res.status).toBe(401);
+    expect(res.body.message).toBe('Invalid credentials');
   });
 
-  // Test 4 — POST /gyms with a valid token should create the gym and return 201
-  it('POST /gyms with a valid token returns 201', async () => {
-    const res = await request(app)
-      .post('/gyms')
-      // 'test-token' is a special fake token that verifyToken accepts during tests
-      // so we don't need a real Firebase account to test this
-      .set('Authorization', 'Bearer test-token')
-      .send({ name: 'New Gym', location: 'Lisbon' });
+  it('returns 401 when the password is wrong', async () => {
+    // The user exists but bcrypt says the password does not match
+    mockPrisma.user.findFirst.mockResolvedValue({
+      id: 1, email: 'ellen@example.com', role: 'employee',
+      password: '$hashed', displayName: 'Ellen'
+    });
+    bcrypt.compare.mockResolvedValue(false);
+    const res = await request(testApp)
+      .post('/api/login')
+      .send({ email: 'ellen@example.com', password: 'wrong', role: 'employee' });
+    expect(res.status).toBe(401);
+    expect(res.body.message).toBe('Invalid credentials');
+  });
 
-    // 201 means Created — the gym was added successfully
+  it('returns 200 with user info on successful login', async () => {
+    mockPrisma.user.findFirst.mockResolvedValue({
+      id: 1, email: 'ellen@example.com', role: 'employee',
+      password: '$hashed', displayName: 'Ellen Johansson'
+    });
+    bcrypt.compare.mockResolvedValue(true);
+    const res = await request(testApp)
+      .post('/api/login')
+      .send({ email: 'ellen@example.com', password: 'correct', role: 'employee' });
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Login successful');
+    expect(res.body.user.email).toBe('ellen@example.com');
+    expect(res.body.user.role).toBe('employee');
+  });
+});
+
+// ─── Employees ────────────────────────────────────────────────────────────────
+
+describe('GET /employees', () => {
+  it('returns 200 and an array', async () => {
+    mockPrisma.employee.findMany.mockResolvedValue([
+      { id: 1, name: 'Ellen Johansson', email: 'ellen@example.com', shifts: [] }
+    ]);
+    const res = await request(testApp).get('/employees');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body[0].name).toBe('Ellen Johansson');
+  });
+});
+
+describe('POST /employees', () => {
+  it('returns 403 when x-role header is not "employer"', async () => {
+    const res = await request(testApp)
+      .post('/employees')
+      .send({ name: 'New Worker', email: 'new@example.com' });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 400 when the request body fails validation', async () => {
+    // email field is missing — Zod should reject this
+    const res = await request(testApp)
+      .post('/employees')
+      .set('x-role', 'employer')
+      .send({ name: 'No Email' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 201 with the created employee when input is valid', async () => {
+    const created = { id: 6, name: 'Sara Berg', email: 'sara@example.com' };
+    mockPrisma.employee.create.mockResolvedValue(created);
+    const res = await request(testApp)
+      .post('/employees')
+      .set('x-role', 'employer')
+      .send({ name: 'Sara Berg', email: 'sara@example.com' });
     expect(res.status).toBe(201);
+    expect(res.body.name).toBe('Sara Berg');
+  });
+});
 
-    // The response should include the gym we just sent
-    expect(res.body.gym.name).toBe('New Gym');
+describe('DELETE /employees/:id', () => {
+  it('returns 403 when x-role is not "employer"', async () => {
+    const res = await request(testApp).delete('/employees/1');
+    expect(res.status).toBe(403);
   });
 
-  // Test 5 — POST /gyms/:id/reviews is also protected, so no token = 401
-  it('POST /gyms/:id/reviews without a token returns 401', async () => {
-    // No Authorization header — verifyToken should block this
-    const res = await request(app).post('/gyms/1/reviews').send({ rating: 5, text: 'Great!' });
+  it('returns 400 when the id is not a valid number', async () => {
+    const res = await request(testApp)
+      .delete('/employees/abc')
+      .set('x-role', 'employer');
+    expect(res.status).toBe(400);
+  });
 
+  it('returns 204 when the employee is deleted successfully', async () => {
+    const res = await request(testApp)
+      .delete('/employees/1')
+      .set('x-role', 'employer');
+    expect(res.status).toBe(204);
+  });
+});
+
+// ─── Availability ─────────────────────────────────────────────────────────────
+
+describe('GET /availability/:id', () => {
+  it('returns 400 when the id is not a valid number', async () => {
+    const res = await request(testApp).get('/availability/abc');
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 200 and the availability array for a valid employee id', async () => {
+    mockPrisma.availability.findMany.mockResolvedValue([
+      { id: 1, employeeId: 1, shift_id: 1, date: '2026-05-20', status: 'available' }
+    ]);
+    const res = await request(testApp).get('/availability/1');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+});
+
+describe('PUT /availability/:id', () => {
+  it('returns 400 when the id is not a valid number', async () => {
+    const res = await request(testApp)
+      .put('/availability/xyz')
+      .send({ date: '2026-05-20', shift_id: 1, status: 'available' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when the body fails Zod validation', async () => {
+    // shift_id is missing
+    const res = await request(testApp)
+      .put('/availability/1')
+      .send({ date: '2026-05-20', status: 'available' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 200 and creates a new availability record when none exists', async () => {
+    const record = { id: 1, employeeId: 1, shift_id: 1, date: '2026-05-20', status: 'available' };
+    mockPrisma.availability.findFirst.mockResolvedValue(null);
+    mockPrisma.availability.create.mockResolvedValue(record);
+    const res = await request(testApp)
+      .put('/availability/1')
+      .send({ date: '2026-05-20', shift_id: 1, status: 'available' });
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('available');
+  });
+});
+
+// ─── Schedule ─────────────────────────────────────────────────────────────────
+
+describe('GET /schedule', () => {
+  it('returns 200 and an array', async () => {
+    const res = await request(testApp).get('/schedule');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+});
+
+describe('PUT /schedule', () => {
+  it('returns 403 when x-role is not "employer"', async () => {
+    const res = await request(testApp)
+      .put('/schedule')
+      .send({ employeeId: 1, date: '2026-05-20', shift_id: 1 });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 400 when the body fails Zod validation', async () => {
+    // shift_id is missing
+    const res = await request(testApp)
+      .put('/schedule')
+      .set('x-role', 'employer')
+      .send({ employeeId: 1, date: '2026-05-20' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 200 when shift is assigned successfully', async () => {
+    const instance = { id: 10, shift_id: 1, date: '2026-05-20' };
+    mockPrisma.shiftInstances.findFirst.mockResolvedValue(instance);
+    const res = await request(testApp)
+      .put('/schedule')
+      .set('x-role', 'employer')
+      .send({ employeeId: 1, date: '2026-05-20', shift_id: 1 });
+    expect(res.status).toBe(200);
+    expect(res.body.employeeId).toBe(1);
+  });
+});
+
+describe('DELETE /schedule', () => {
+  it('returns 403 when x-role is not "employer"', async () => {
+    const res = await request(testApp)
+      .delete('/schedule')
+      .send({ employeeId: 1, date: '2026-05-20', shift_id: 1 });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 204 when the shift instance does not exist (nothing to delete)', async () => {
+    mockPrisma.shiftInstances.findFirst.mockResolvedValue(null);
+    const res = await request(testApp)
+      .delete('/schedule')
+      .set('x-role', 'employer')
+      .send({ employeeId: 1, date: '2026-05-20', shift_id: 1 });
+    expect(res.status).toBe(204);
+  });
+
+  it('returns 204 after successfully removing the assignment', async () => {
+    mockPrisma.shiftInstances.findFirst.mockResolvedValue({ id: 10 });
+    const res = await request(testApp)
+      .delete('/schedule')
+      .set('x-role', 'employer')
+      .send({ employeeId: 1, date: '2026-05-20', shift_id: 1 });
+    expect(res.status).toBe(204);
+  });
+});
+
+
+// ─── Health check ─────────────────────────────────────────────────────────────
+
+describe('GET /api/health', () => {
+  it('returns 200 and { status: "ok" }', async () => {
+    const res = await request(testApp).get('/api/health');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: 'ok' });
+  });
+});
+
+// ─── Login ────────────────────────────────────────────────────────────────────
+
+describe('POST /api/login', () => {
+  it('returns 400 when required fields are missing', async () => {
+    // Sending only email — password and role are absent
+    const res = await request(testApp).post('/api/login').send({ email: 'a@b.com' });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/required/i);
+  });
+
+  it('returns 400 when role is not "employee" or "employer"', async () => {
+    const res = await request(testApp)
+      .post('/api/login')
+      .send({ email: 'a@b.com', password: 'secret', role: 'admin' });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/role/i);
+  });
+
+  it('returns 401 when the user does not exist in the database', async () => {
+    // prisma.user.findFirst returns null — no matching account
+    prisma.user.findFirst.mockResolvedValue(null);
+    const res = await request(testApp)
+      .post('/api/login')
+      .send({ email: 'ghost@example.com', password: 'secret', role: 'employee' });
     expect(res.status).toBe(401);
+    expect(res.body.message).toBe('Invalid credentials');
   });
 
+  it('returns 401 when the password is wrong', async () => {
+    // The user exists but bcrypt says the password does not match
+    prisma.user.findFirst.mockResolvedValue({
+      id: 1, email: 'ellen@example.com', role: 'employee',
+      password: '$hashed', displayName: 'Ellen'
+    });
+    bcrypt.compare.mockResolvedValue(false);
+    const res = await request(testApp)
+      .post('/api/login')
+      .send({ email: 'ellen@example.com', password: 'wrong', role: 'employee' });
+    expect(res.status).toBe(401);
+    expect(res.body.message).toBe('Invalid credentials');
+  });
+
+  it('returns 200 with user info on successful login', async () => {
+    prisma.user.findFirst.mockResolvedValue({
+      id: 1, email: 'ellen@example.com', role: 'employee',
+      password: '$hashed', displayName: 'Ellen Johansson'
+    });
+    bcrypt.compare.mockResolvedValue(true);
+    const res = await request(testApp)
+      .post('/api/login')
+      .send({ email: 'ellen@example.com', password: 'correct', role: 'employee' });
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Login successful');
+    expect(res.body.user.email).toBe('ellen@example.com');
+    expect(res.body.user.role).toBe('employee');
+  });
+});
+
+// ─── Employees ────────────────────────────────────────────────────────────────
+
+describe('GET /employees', () => {
+  it('returns 200 and an array', async () => {
+    prisma.employee.findMany.mockResolvedValue([
+      { id: 1, name: 'Ellen Johansson', email: 'ellen@example.com', shifts: [] }
+    ]);
+    const res = await request(testApp).get('/employees');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body[0].name).toBe('Ellen Johansson');
+  });
+});
+
+describe('POST /employees', () => {
+  it('returns 403 when x-role header is not "employer"', async () => {
+    // Omitting the x-role header entirely
+    const res = await request(testApp)
+      .post('/employees')
+      .send({ name: 'New Worker', email: 'new@example.com' });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 400 when the request body fails validation', async () => {
+    // email field is missing — Zod should reject this
+    const res = await request(testApp)
+      .post('/employees')
+      .set('x-role', 'employer')
+      .send({ name: 'No Email' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 201 with the created employee when input is valid', async () => {
+    const created = { id: 6, name: 'Sara Berg', email: 'sara@example.com' };
+    prisma.employee.create.mockResolvedValue(created);
+    const res = await request(testApp)
+      .post('/employees')
+      .set('x-role', 'employer')
+      .send({ name: 'Sara Berg', email: 'sara@example.com' });
+    expect(res.status).toBe(201);
+    expect(res.body.name).toBe('Sara Berg');
+  });
+});
+
+describe('DELETE /employees/:id', () => {
+  it('returns 403 when x-role is not "employer"', async () => {
+    const res = await request(testApp).delete('/employees/1');
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 400 when the id is not a valid number', async () => {
+    const res = await request(testApp)
+      .delete('/employees/abc')
+      .set('x-role', 'employer');
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 204 when the employee is deleted successfully', async () => {
+    prisma.employee.delete.mockResolvedValue({});
+    const res = await request(testApp)
+      .delete('/employees/1')
+      .set('x-role', 'employer');
+    expect(res.status).toBe(204);
+  });
+});
+
+// ─── Availability ─────────────────────────────────────────────────────────────
+
+describe('GET /availability/:id', () => {
+  it('returns 400 when the id is not a valid number', async () => {
+    const res = await request(testApp).get('/availability/abc');
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 200 and the availability array for a valid employee id', async () => {
+    prisma.availability.findMany.mockResolvedValue([
+      { id: 1, employeeId: 1, shift_id: 1, date: '2026-05-20', status: 'available' }
+    ]);
+    const res = await request(testApp).get('/availability/1');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+});
+
+describe('PUT /availability/:id', () => {
+  it('returns 400 when the id is not a valid number', async () => {
+    const res = await request(testApp)
+      .put('/availability/xyz')
+      .send({ date: '2026-05-20', shift_id: 1, status: 'available' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when the body fails Zod validation', async () => {
+    // shift_id is missing
+    const res = await request(testApp)
+      .put('/availability/1')
+      .send({ date: '2026-05-20', status: 'available' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 200 and creates a new availability record when none exists', async () => {
+    const record = { id: 1, employeeId: 1, shift_id: 1, date: '2026-05-20', status: 'available' };
+    prisma.availability.findFirst.mockResolvedValue(null);  // no existing record
+    prisma.availability.create.mockResolvedValue(record);
+    const res = await request(testApp)
+      .put('/availability/1')
+      .send({ date: '2026-05-20', shift_id: 1, status: 'available' });
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('available');
+  });
+});
+
+// ─── Schedule ─────────────────────────────────────────────────────────────────
+
+describe('GET /schedule', () => {
+  it('returns 200 and an array', async () => {
+    prisma.shiftInstances.findMany.mockResolvedValue([]);
+    const res = await request(testApp).get('/schedule');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+});
+
+describe('PUT /schedule', () => {
+  it('returns 403 when x-role is not "employer"', async () => {
+    const res = await request(testApp)
+      .put('/schedule')
+      .send({ employeeId: 1, date: '2026-05-20', shift_id: 1 });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 400 when the body fails Zod validation', async () => {
+    // shift_id is missing
+    const res = await request(testApp)
+      .put('/schedule')
+      .set('x-role', 'employer')
+      .send({ employeeId: 1, date: '2026-05-20' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 200 when shift is assigned successfully', async () => {
+    const instance = { id: 10, shift_id: 1, date: '2026-05-20' };
+    prisma.shiftInstances.findFirst.mockResolvedValue(instance);
+    prisma.employeeShift.findFirst.mockResolvedValue(null);
+    prisma.employeeShift.create.mockResolvedValue({});
+    const res = await request(testApp)
+      .put('/schedule')
+      .set('x-role', 'employer')
+      .send({ employeeId: 1, date: '2026-05-20', shift_id: 1 });
+    expect(res.status).toBe(200);
+    expect(res.body.employeeId).toBe(1);
+  });
+});
+
+describe('DELETE /schedule', () => {
+  it('returns 403 when x-role is not "employer"', async () => {
+    const res = await request(testApp)
+      .delete('/schedule')
+      .send({ employeeId: 1, date: '2026-05-20', shift_id: 1 });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 204 when the shift instance does not exist (nothing to delete)', async () => {
+    prisma.shiftInstances.findFirst.mockResolvedValue(null);
+    const res = await request(testApp)
+      .delete('/schedule')
+      .set('x-role', 'employer')
+      .send({ employeeId: 1, date: '2026-05-20', shift_id: 1 });
+    expect(res.status).toBe(204);
+  });
+
+  it('returns 204 after successfully removing the assignment', async () => {
+    prisma.shiftInstances.findFirst.mockResolvedValue({ id: 10 });
+    prisma.employeeShift.deleteMany.mockResolvedValue({});
+    const res = await request(testApp)
+      .delete('/schedule')
+      .set('x-role', 'employer')
+      .send({ employeeId: 1, date: '2026-05-20', shift_id: 1 });
+    expect(res.status).toBe(204);
+  });
 });

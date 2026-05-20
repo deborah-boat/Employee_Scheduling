@@ -4,7 +4,8 @@
   "description": "Backend workspace for the Employee project.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "dev": "nodemon --exec tsx index.js"
   },
   "prisma": {
@@ -29,6 +30,8 @@
     "@types/node": "^25.6.0",
     "nodemon": "^3.1.14",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "supertest": "^7.0.0",
+    "vitest": "^3.2.1"
   }
 }
