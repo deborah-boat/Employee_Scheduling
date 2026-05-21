@@ -72,6 +72,14 @@ export default function App() {
 
   useEffect(() => {
     const restoreAuthSession = async () => {
+      // Skip session restore if the user explicitly logged out
+      if (localStorage.getItem("logged_out") === "true") {
+        localStorage.removeItem("logged_out");
+        setRole(null);
+        setUser(null);
+        return;
+      }
+
       const params = new URLSearchParams(window.location.search);
       const requestedRole = params.get("role");
       const storedRole = storedAuth.role;
@@ -444,6 +452,7 @@ export default function App() {
                     // If the session is an OIDC session, perform a redirect logout so Auth0 can end the session.
                     if (user?.token === "oidc-session") {
                       localStorage.removeItem(AUTH_STORAGE_KEY);
+                      localStorage.setItem("logged_out", "true");
                       setUser(null);
                       setRole(null);
                       window.location.assign(apiUrl("/api/auth/logout"));
@@ -458,6 +467,7 @@ export default function App() {
                     }
 
                     localStorage.removeItem(AUTH_STORAGE_KEY);
+                    localStorage.setItem("logged_out", "true");
                     setUser(null);
                     setRole(null);
                     window.location.assign("/");

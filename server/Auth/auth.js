@@ -2,7 +2,7 @@ const { auth } = require("express-openid-connect");
 const dotenv = require("dotenv");
 dotenv.config({ override: false });
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 4000;
 const sessionSecret =
   process.env.AUTH0_SECRET ||
   process.env.SECRET;
