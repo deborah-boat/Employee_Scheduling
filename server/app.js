@@ -82,7 +82,7 @@ function createApp(prisma, deps = {}) {
     const role = normalizeRole(req.query.role);
     const returnTo = `${CLIENT_ORIGIN}/?role=${encodeURIComponent(role)}`;
 
-    return res.oidc.login({ returnTo });
+    return res.oidc.login({ returnTo, authorizationParams: { prompt: "login" } });
   });
 
   app.get("/api/auth/session", (req, res) => {
