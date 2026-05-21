@@ -7,6 +7,15 @@ const { z, ZodError } = require("zod");
 
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 
+function normalizeRole(value) {
+  const role = String(value || "").toLowerCase();
+  return role === "employer" || role === "employee" ? role : "employee";
+}
+
+function getLogoutReturnTo() {
+  return process.env.AUTH0_POST_LOGOUT_REDIRECT || CLIENT_ORIGIN;
+}
+
 // ─── Zod schemas ─────────────────────────────────────────────────────────────
 
 const employeeSchema = z.object({
@@ -36,6 +45,9 @@ function createApp(prisma, deps = {}) {
 
   app.use(cors({ origin: CLIENT_ORIGIN }));
   app.use(express.json());
+  if (deps.authMiddleware) {
+    app.use(deps.authMiddleware);
+  }
 
   app.use((req, res, next) => {
     req.requestId = req.get("x-request-id") || randomUUID();
@@ -64,6 +76,47 @@ function createApp(prisma, deps = {}) {
   // Health check — used to verify the server is reachable
   app.get("/api/health", (_req, res) => {
     res.status(200).json({ status: "ok" });
+  });
+
+  app.get("/api/auth/login", (req, res) => {
+    const role = normalizeRole(req.query.role);
+    const returnTo = `${CLIENT_ORIGIN}/?role=${encodeURIComponent(role)}`;
+
+    return res.oidc.login({ returnTo });
+  });
+
+  app.get("/api/auth/session", (req, res) => {
+    if (!req.oidc.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const role = normalizeRole(req.query.role);
+
+    const oidcUser = req.oidc.user || {};
+    return res.status(200).json({
+      user: {
+        id: oidcUser.sub,
+        email: oidcUser.email || "",
+        role,
+        displayName: oidcUser.name || oidcUser.nickname || oidcUser.email || "User"
+      }
+    });
+  });
+
+  app.get("/api/auth/logout", (_req, res) => {
+    return res.oidc.logout({ returnTo: getLogoutReturnTo() });
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    try {
+      if (req.oidc && typeof req.oidc.isAuthenticated === "function" && req.oidc.isAuthenticated()) {
+        return res.oidc.logout({ returnTo: getLogoutReturnTo() });
+      }
+    } catch (err) {
+      // ignore and continue to return a JSON response for API clients
+    }
+
+    return res.status(200).json({ message: "Logged out" });
   });
 
   // Login — validates credentials and returns user info
