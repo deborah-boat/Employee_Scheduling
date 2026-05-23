@@ -1033,6 +1033,72 @@ button.link {
   opacity: 0.8;
 }
 
+.login-field__toggle {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: #667085;
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+}
+
+.login-divider hr {
+  flex: 1;
+  border: none;
+  border-top: 1px solid #E4E7EC;
+  margin: 0;
+}
+
+.login-divider span {
+  font-size: 14px;
+  color: #667085;
+  white-space: nowrap;
+  font-family: 'Inter', sans-serif;
+}
+
+.login-social {
+  display: flex;
+  gap: 12px;
+}
+
+.login-social__btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #D0D5DD;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #344054;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.login-social__btn:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.login-social__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
   .login-screen {
     flex-direction: column;
