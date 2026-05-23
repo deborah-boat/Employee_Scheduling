@@ -45,7 +45,11 @@ const mockPrisma = {
 };
 
 // Build the app once — all tests share this instance
-const testApp = createApp(mockPrisma, { bcrypt: mockBcrypt });
+// requiresAuth is bypassed with a no-op so tests run without a real OIDC session
+const testApp = createApp(mockPrisma, {
+  bcrypt: mockBcrypt,
+  requiresAuth: () => (_req, _res, next) => next()
+});
 
 // Reset all stubs before each test so return values don't bleed across tests
 beforeEach(() => {
