@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -25,49 +19,49 @@ model User {
 }
 
 model Employee {
-  id             Int            @id @default(autoincrement())
+  id             Int             @id @default(autoincrement())
   name           String
-  email          String         @unique
+  email          String          @unique
   position       String?
   profilePicture String?
   loginCode      String?
-  userId         Int?           @unique
-  user           User?          @relation(fields: [userId], references: [id])
-  shifts         EmployeeShift[]
+  userId         Int?            @unique
   availability   Availability[]
+  user           User?           @relation(fields: [userId], references: [id])
+  shifts         EmployeeShift[]
 }
 
 model Shift {
-  id Int @id @default(autoincrement())
-  name String
-  start_time String
-  end_time String
-  instances ShiftInstances[]
+  id           Int              @id @default(autoincrement())
+  name         String
+  start_time   String
+  end_time     String
   availability Availability[]
+  instances    ShiftInstances[]
 }
 
 model ShiftInstances {
-  id Int @id @default(autoincrement())
-  shift_id Int
-  date DateTime
-  shift Shift @relation(fields: [shift_id], references: [id])
+  id        Int             @id @default(autoincrement())
+  shift_id  Int
+  date      DateTime
   employees EmployeeShift[]
+  shift     Shift           @relation(fields: [shift_id], references: [id])
 }
 
 model EmployeeShift {
-  id Int @id @default (autoincrement())
-  employeeId Int
+  id              Int            @id @default(autoincrement())
+  employeeId      Int
   shiftInstanceId Int
-  employee Employee @relation(fields: [employeeId], references: [id])
-  shiftInstance ShiftInstances @relation(fields: [shiftInstanceId], references: [id])
+  employee        Employee       @relation(fields: [employeeId], references: [id])
+  shiftInstance   ShiftInstances @relation(fields: [shiftInstanceId], references: [id])
 }
 
 model Availability {
-  id Int @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   employeeId Int
-  date DateTime
-  shift_id Int
-  status String
-  employee Employee @relation(fields: [employeeId], references: [id])
-  shift Shift @relation(fields: [shift_id], references: [id])
+  date       DateTime
+  shift_id   Int
+  status     String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  shift      Shift    @relation(fields: [shift_id], references: [id])
 }
