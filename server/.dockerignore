@@ -1,0 +1,12 @@
+# Never copy the host's node_modules — Docker installs its own inside the image
+node_modules
+
+# Secrets must never end up inside a Docker image
+.env
+.env.*
+!.env.example
+
+# Test output and logs — not needed at runtime
+coverage
+*.log
+npm-debug.log*

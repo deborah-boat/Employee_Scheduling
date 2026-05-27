@@ -15,7 +15,7 @@ function createApp(prisma, deps = {}) {
   const requiresAuth = deps.requiresAuth || require("express-openid-connect").requiresAuth;
   const app = express();
 
-  app.use(cors({ origin: CLIENT_ORIGIN }));
+  app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
   app.use(express.json());
   if (deps.authMiddleware) {
     app.use(deps.authMiddleware);

@@ -1,0 +1,15 @@
+# Never copy the host's node_modules — Docker installs its own inside the image
+node_modules
+
+# Secrets must never end up inside a Docker image
+.env
+.env.*
+!.env.example
+
+# Vite build output — the Dockerfile rebuilds this inside the container
+dist
+
+# Test output and logs — not needed for building or serving
+coverage
+*.log
+npm-debug.log*
