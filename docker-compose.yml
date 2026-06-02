@@ -24,7 +24,7 @@ services:
   backend:
     build:
       context: ./server                          # files available to COPY are in ./server
-      dockerfile: ../docker/backend.Dockerfile   # instructions live in ./docker/
+      dockerfile: docker/backend.Dockerfile       # instructions live in ./server/docker/
     ports:
       - "4000:4000"
     environment:
@@ -52,7 +52,7 @@ services:
   frontend:
     build:
       context: ./client                           # files available to COPY are in ./client
-      dockerfile: ../docker/frontend.Dockerfile   # instructions live in ./docker/
+      dockerfile: ../server/docker/frontend.Dockerfile   # instructions live in ./server/docker/
       args:
         # The browser talks to the backend directly on port 4000
         VITE_API_BASE_URL: http://localhost:4000
