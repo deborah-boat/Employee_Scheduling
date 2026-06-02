@@ -124,33 +124,17 @@ Employee_Scheduling/
 | Step | Action | Command |
 |---|---|---|
 | 1 | Copy `.env.example` to `server/.env` and fill in your Auth0 credentials (see [Environment Variables](#environment-variables)) | — |
-| 2 | Start all services from the project root | `docker compose up --build` |
+| 2 | Start all services from the project root.<br>**Frontend:** http://localhost:5173<br>**Backend API:** http://localhost:4000<br>**PostgreSQL:** localhost:5433 | `docker compose up --build` |
 | 3 | Stop and remove volumes | `docker compose down -v` |
-
-**Services after step 2:**
-
-| Service | URL |
-|---|---|
-| Frontend | http://localhost:5173 |
-| Backend API | http://localhost:4000 |
-| PostgreSQL | localhost:5433 |
 
 ### Local Development
 
 Requires Node.js and a running PostgreSQL instance.
 
-**Backend** (from `server/`):
-```bash
-npm install
-npx prisma db push
-npm run dev       # nodemon on port 4000
-```
-
-**Frontend** (from `client/`):
-```bash
-npm install
-npm run dev       # Vite dev server on port 5173
-```
+| Service | Directory | Commands |
+|---|---|---|
+| Backend | `server/` | `npm install`<br>`npx prisma db push`<br>`npm run dev` — nodemon on port 4000 |
+| Frontend | `client/` | `npm install`<br>`npm run dev` — Vite dev server on port 5173 |
 
 ---
 
