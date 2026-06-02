@@ -11,6 +11,8 @@ if (!sessionSecret) {
   throw new Error("Missing AUTH0_SECRET (or SECRET) environment variable");
 }
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const config = {
   authRequired: false,
   auth0Logout: true,
@@ -32,6 +34,12 @@ const config = {
     scope: 'openid profile email',
   },
   errorOnRequiredAuth: true, // Returns 401 instead of redirecting on protected routes
+  session: {
+    cookie: {
+      sameSite: isProduction ? 'None' : 'Lax',
+      secure: isProduction,
+    }
+  },
 };
 
 const authMiddleware = auth(config);
