@@ -8,6 +8,10 @@
 
 ---
 
+![App Preview](client/src/assets/appview.png)
+
+---
+
 ## Table of Contents
 
 - [Features](#features)
@@ -150,6 +154,8 @@ Requires Node.js and a running PostgreSQL instance.
 ---
 
 ## Reflections
+
+---
 
 ## Authors
 
