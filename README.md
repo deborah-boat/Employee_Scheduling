@@ -263,26 +263,17 @@ details>
 
 ### Authentication
 
-Authentication is implemented using **Auth0** via the [`express-openid-connect`](https://github.com/auth0/express-openid-connect) library, which implements the **OAuth 2.0 Authorization Code Flow with OIDC**.
-
-When a user clicks **"Continue with Auth0"** on the login screen, the frontend calls `POST /api/auth/login`, which invokes `res.oidc.login()`. This redirects the user to the Auth0 hosted login page where they authenticate with their credentials. After a successful login, Auth0 redirects back to the `/callback` endpoint on the backend. The `express-openid-connect` middleware handles the token exchange automatically and establishes an **encrypted session cookie** on the browser.
-
-From that point on, every request from the frontend carries the session cookie automatically. Protected backend routes are guarded with the `requiresAuth()` middleware, also from `express-openid-connect`. This middleware checks `req.oidc.isAuthenticated()` — if the session is missing or expired, the request is rejected with `401 Unauthorized` before reaching the route handler. If the session is valid, the decoded user profile (`sub`, `email`, `name`) is available on `req.oidc.user`, allowing the route to serve the protected resource.
-
-The `/api/auth/session` endpoint reads `req.oidc.user` and returns the user's id, email, display name, and role to the frontend so the UI can render the correct view (employer or employee dashboard).
+Authentication is handled by **Auth0** using the `express-openid-connect` library. When a user clicks "Continue with Auth0", they are redirected to the Auth0 login page. After logging in, Auth0 redirects back to the app and a session cookie is created automatically. Protected routes use the `requiresAuth()` middleware to check if the user is logged in — if not, the request is rejected with `401 Unauthorized`. The user's profile is read from `req.oidc.user` and returned to the frontend so it can show the right dashboard.
 
 ### Security Decisions
 
-- **No secret API keys are committed to the repository.** All credentials (Auth0 client ID, client secret, session secret, database URL) are stored in a `.env` file, which is listed in `.gitignore` and `.dockerignore`. Exposing these keys would allow unauthorized access to the Auth0 tenant and the database.
-- **Protected routes return `401 Unauthorized` for unauthenticated requests** because the session cookie is either absent or invalid. This prevents unauthenticated users from reading or modifying protected data.
-- **Role-based access returns `403 Forbidden` for insufficient permissions.** Employer-only routes (registering employees, editing the schedule) check the `x-role` request header and reject requests from employees or unauthenticated callers before any database operation is attempted.
-- **CORS is configured to only allow requests from the frontend origin** (`CLIENT_ORIGIN` environment variable). This prevents unauthorized domains from making cross-origin requests to the API.
-- **Auth session state is stored in an encrypted server-side session cookie, not in `localStorage`.** Values in `localStorage` are accessible to any JavaScript running on the page and can be stolen in XSS attacks. Session cookies with `HttpOnly` and `Secure` flags are not accessible to client-side scripts.
-- **The session cookie uses `sameSite: 'None'` + `secure: true` in production (HTTPS)** and `sameSite: 'Lax'` in local development (HTTP). The `sameSite` attribute reduces the risk of CSRF attacks by controlling when the browser sends the cookie on cross-site requests.
-- **`credentials: true` is set in the CORS configuration** so that the browser includes the session cookie on authenticated cross-origin requests between the frontend and the backend.
-- **Passwords are hashed with `bcrypt`** before being stored in the database. Plain-text passwords are never persisted, so a database leak does not expose user credentials directly.
-- **All incoming request bodies are validated with Zod schemas** before any database operation. Invalid or malformed input is rejected with a `400 Bad Request` response, preventing unexpected data from reaching the database layer.
-- **Secrets are injected into containers at runtime** via `docker-compose.yml` environment variables and are never baked into Docker images, so published images do not contain credentials.
+- **Secrets are stored in `.env`** and never committed to Git or baked into Docker images, to prevent unauthorized access.
+- **Protected routes return `401`** when the session is missing or expired, and **`403`** when a non-employer tries to access employer-only actions.
+- **CORS only allows requests from the frontend origin** to block other domains from calling the API.
+- **Session state is kept in a cookie, not `localStorage`**, because `localStorage` can be read by JavaScript and is vulnerable to XSS attacks.
+- **The session cookie is configured with `sameSite` and `secure` flags** to reduce the risk of CSRF attacks.
+- **Passwords are hashed with `bcrypt`** so plain-text passwords are never stored in the database.
+- **All request bodies are validated with Zod** before touching the database, so invalid input is rejected early.
 
 ---
 
