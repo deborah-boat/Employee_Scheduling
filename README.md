@@ -26,7 +26,9 @@
   - [Local Development](#local-development)
 - [Environment Variables](#environment-variables)
 - [Testing](#testing)
-- [Authentication and Security](#security)
+- [Authentication and Security](#authentication-and-security)
+  - [Authentication](#authentication)
+  - [Security Decisions](#security-decisions)
 - [Authors](#authors)
 
 ---
@@ -246,8 +248,8 @@ Fake component wrappers tested in isolation using [Testing Library](https://test
 
 </details>
 
-details>
-<summary><strong>Gitub actions</strong> &nbsp;·&nbsp; <code>client/tests/unit/components.test.jsx</code> &nbsp;·&nbsp; 17 tests</summary>
+<details>
+<summary><strong>Gitub actions</strong> </summary>
 
 <br>
 
@@ -255,15 +257,12 @@ details>
 
 </details>
 
-
 ---
 
 
 ## Authentication and Security
 
-### Authentication
-
-Authentication is handled by **Auth0** using the `express-openid-connect` library. When a user clicks "Continue with Auth0", they are redirected to the Auth0 login page. After logging in, Auth0 redirects back to the app and a session cookie is created automatically. Protected routes use the `requiresAuth()` middleware to check if the user is logged in — if not, the request is rejected with `401 Unauthorized`. The user's profile is read from `req.oidc.user` and returned to the frontend so it can show the right dashboard.
+### Authentication **Auth0** using the `express-openid-connect` library. When a user clicks "Continue with Auth0", they are redirected to the Auth0 login page. After logging in, Auth0 redirects back to the app and a session cookie is created automatically. Protected routes use the `requiresAuth()` middleware to check if the user is logged in — if not, the request is rejected with `401 Unauthorized`. The user's profile is read from `req.oidc.user` and returned to the frontend so it can show the right dashboard.
 
 ### Security Decisions
 
