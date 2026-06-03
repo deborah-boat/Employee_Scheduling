@@ -1,27 +1,29 @@
 import { useState } from "react";
+// DAYS and SHIFTS are the shared lists used across the whole app
 import { DAYS, SHIFTS } from "../constants";
 import "../styles/EmployeeView.css";
 
-// Labels and time ranges shown in the grid and modal
+// Human-readable labels for each shift key
 const SHIFT_LABELS = {
   morning: "Morning Shift",
   afternoon: "Afternoon Shift",
   night: "Evening Shift"
 };
 
+// Time ranges displayed inside the grid cells
 const SHIFT_TIMES = {
   morning: "7-15",
   afternoon: "15-18",
   night: "18-23"
 };
 
-// Background colour for each status in the grid cell
+// Background colour for each availability status in the grid
 const STATUS_COLORS = {
   available: "#d1fae5",
   unavailable: "#fee2e2"
 };
 
-// Colours for each shift option in the modal
+// Background colour for each shift button inside the modal
 const SHIFT_MODAL_COLORS = {
   morning: "#fef3c7",
   afternoon: "#d1fae5",
@@ -29,22 +31,26 @@ const SHIFT_MODAL_COLORS = {
 };
 
 export default function EmployeeView({ employees, schedule, availability, onSetAvailability, weekStartDate, user }) {
-  // Find the employee that matches the logged-in user by display name, fallback to first
+  // Try to match the logged-in user to an employee by name, fall back to the first employee
   const matchedId = employees.find((e) => e.name === user?.username)?.id ?? employees[0]?.id ?? null;
   // eslint-disable-next-line no-unused-vars
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(matchedId);
 
-  // Modal state: which day is open, the top-level choice, and preferred shifts
+  // modalDay: which day column has the availability modal open (null = closed)
   const [modalDay, setModalDay] = useState(null);
-  // Cancel-shift modal state: { day, shift } or null
+  // cancelTarget: which { day, shift } slot the cancel confirmation is for
   const [cancelTarget, setCancelTarget] = useState(null);
-  // Day-all modal: set entire day available or unavailable
-  const [dayAllModal, setDayAllModal] = useState(null); // dayKey string or null
+  // dayAllModal: which day the "set whole day" modal is open for
+  const [dayAllModal, setDayAllModal] = useState(null);
+  // topChoice: the quick-pick option the employee selected in the modal
   const [topChoice, setTopChoice] = useState(null);       // "available_all" | "unavailable" | null
-  const [preferredShifts, setPreferredShifts] = useState([]); // shifts toggled in "I prefer"
+  // preferredShifts: the specific shifts the employee toggled as preferred
+  const [preferredShifts, setPreferredShifts] = useState([]);
 
+  // Find the full employee object for the currently selected ID
   const employee = employees.find((item) => item.id === selectedEmployeeId);
 
+  // If no employee is found, show a friendly message instead of crashing
   if (!employee) {
     return (
       <div className="content">
@@ -56,7 +62,7 @@ export default function EmployeeView({ employees, schedule, availability, onSetA
     );
   }
 
-  // Build day column labels: "Wed 1/4", "Thu 2/4", …
+  // Build the column headers with the actual date for each day, e.g. "Wed 1/4"
   const dayColumns = DAYS.map((dayKey, index) => {
     if (weekStartDate) {
       const date = new Date(weekStartDate);
@@ -66,58 +72,60 @@ export default function EmployeeView({ employees, schedule, availability, onSetA
     return { dayKey, label: dayKey };
   });
 
-  // Open the modal for a specific day column
+  // Open the availability modal for a specific day and reset any previous selections
   const openModal = (dayKey) => {
     setModalDay(dayKey);
     setTopChoice(null);
     setPreferredShifts([]);
   };
 
-  // Close without saving
+  // Close the modal without saving anything
   const closeModal = () => {
     setModalDay(null);
     setTopChoice(null);
     setPreferredShifts([]);
   };
 
-  // Open the cancel-shift confirmation modal
+  // Open the cancel confirmation for a single shift slot
   const openCancelModal = (dayKey, shift) => {
     setCancelTarget({ day: dayKey, shift });
   };
 
-  // Confirm clearing a single shift slot
+  // Confirm removing a single shift's availability status
   const handleCancelShift = () => {
     if (!cancelTarget) return;
     onSetAvailability(employee.id, cancelTarget.day, cancelTarget.shift, "");
     setCancelTarget(null);
   };
 
-  // Set all shifts of a day to the same status
+  // Set every shift of a day to the same status at once
   const handleDayAll = (status) => {
     if (!dayAllModal) return;
     SHIFTS.forEach((shift) => onSetAvailability(employee.id, dayAllModal, shift, status));
     setDayAllModal(null);
   };
 
-  // Toggle a shift in the "I prefer" list
+  // Toggle a shift on or off in the preferred list
   const togglePreferredShift = (shift) => {
     setPreferredShifts((prev) =>
       prev.includes(shift) ? prev.filter((s) => s !== shift) : [...prev, shift]
     );
-    // Clear the top-level choice when a specific shift is picked
+    // Deselect the quick-pick option when the employee picks specific shifts
     setTopChoice(null);
   };
 
-  // Apply the selection and close the modal
+  // Save the availability choices and close the modal
   const handleConfirm = () => {
     if (!modalDay) return;
 
     if (topChoice === "available_all") {
+      // Mark every shift as available
       SHIFTS.forEach((shift) => onSetAvailability(employee.id, modalDay, shift, "available"));
     } else if (topChoice === "unavailable") {
+      // Mark every shift as unavailable
       SHIFTS.forEach((shift) => onSetAvailability(employee.id, modalDay, shift, "unavailable"));
     } else if (preferredShifts.length > 0) {
-      // Preferred shifts → available; others → unavailable
+      // Preferred shifts get "available", everything else gets "unavailable"
       SHIFTS.forEach((shift) => {
         const status = preferredShifts.includes(shift) ? "available" : "unavailable";
         onSetAvailability(employee.id, modalDay, shift, status);
@@ -127,15 +135,14 @@ export default function EmployeeView({ employees, schedule, availability, onSetA
     closeModal();
   };
 
+  // The Confirm button is only active when at least one shift has been selected
   const canConfirm = preferredShifts.length > 0;
-
-  
 
   return (
     <>
       <div className="ev-section">
 
-        {/* Heading */}
+        {/* Section heading with an edit icon */}
         <div className="ev-heading">
           <svg className="ev-heading-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
@@ -144,7 +151,7 @@ export default function EmployeeView({ employees, schedule, availability, onSetA
           <span className="ev-underline" />
         </div>
 
-        {/* Employee name display */}
+        {/* Read-only field showing the logged-in employee's name */}
         <div className="ev-name-wrap">
           <input
             className="ev-name-input"
@@ -154,11 +161,11 @@ export default function EmployeeView({ employees, schedule, availability, onSetA
           />
         </div>
 
-        {/* Grid */}
+        {/* Scrollable availability grid */}
         <div className="ev-grid-scroll">
           <div className="ev-grid" role="grid">
 
-            {/* Corner + day headers */}
+            {/* Top-left corner cell + one header cell per day — clicking a day opens the day-all modal */}
             <div className="ev-cell ev-cell-header">Shifts/Days</div>
             {dayColumns.map(({ dayKey, label }) => (
               <div
@@ -172,17 +179,20 @@ export default function EmployeeView({ employees, schedule, availability, onSetA
               >{label}</div>
             ))}
 
-            {/* Shift rows */}
+            {/* One row per shift — each cell shows the current status or a button to set it */}
             {SHIFTS.map((shift) => (
               <>
+                {/* Row label on the left */}
                 <div key={`${shift}-label`} className="ev-cell ev-cell-label">
                   {SHIFT_LABELS[shift]}
                 </div>
                 {dayColumns.map(({ dayKey }) => {
+                  // Check if this employee is already scheduled for this slot
                   const raw = schedule?.[dayKey]?.[shift] ?? null;
                   const assignedIds = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
                   const isScheduled = assignedIds.includes(employee.id);
 
+                  // If scheduled, show a locked "Scheduled" cell — cannot be changed by the employee
                   if (isScheduled) {
                     return (
                       <div key={`${shift}-${dayKey}`} className="ev-cell ev-cell-scheduled">
@@ -197,11 +207,14 @@ export default function EmployeeView({ employees, schedule, availability, onSetA
                     );
                   }
 
+                  // Read the current availability status for this cell
                   const status = availability[employee.id]?.[dayKey]?.[shift] || "";
                   let cls = "ev-cell ev-cell-empty";
                   let text = "";
                   if (status === "available")   { cls = "ev-cell ev-cell-available";   text = "Available"; }
                   if (status === "unavailable") { cls = "ev-cell ev-cell-unavailable"; text = "Unavailable"; }
+
+                  // If a status is already set, clicking the cell opens the cancel confirmation
                   return status ? (
                     <div
                       key={`${shift}-${dayKey}`}
@@ -215,6 +228,7 @@ export default function EmployeeView({ employees, schedule, availability, onSetA
                       {text}
                     </div>
                   ) : (
+                    // If no status is set, show a "Choose Availability" button
                     <div key={`${shift}-${dayKey}`} className="ev-cell" style={{ padding: 0, border: "1.5px solid #e5e7eb" }}>
                       <button
                         type="button"
@@ -232,14 +246,14 @@ export default function EmployeeView({ employees, schedule, availability, onSetA
           </div>
         </div>
 
-        {/* Footnote */}
+        {/* Hint text at the bottom explaining the day-header click behaviour */}
         <p className="ev-footnote">
           If you want to select all day <span className="ev-footnote-available">Available</span> or <span className="ev-footnote-unavailable">Unavailable</span>, click on the date — a modal will open to choose.
         </p>
 
       </div>
 
-      {/* Day-all modal */}
+      {/* Modal: set all shifts for a whole day at once */}
       {dayAllModal && (
         <div className="ev-modal-overlay" onClick={() => setDayAllModal(null)}>
           <div className="ev-modal" onClick={(e) => e.stopPropagation()}>
@@ -268,7 +282,7 @@ export default function EmployeeView({ employees, schedule, availability, onSetA
         </div>
       )}
 
-      {/* Cancel-shift confirmation modal */}
+      {/* Modal: confirm removing a single shift's availability status */}
       {cancelTarget && (
         <div className="ev-modal-overlay" onClick={() => setCancelTarget(null)}>
           <div className="ev-modal" onClick={(e) => e.stopPropagation()}>
@@ -291,7 +305,7 @@ export default function EmployeeView({ employees, schedule, availability, onSetA
         </div>
       )}
 
-      {/* Availability modal */}
+      {/* Modal: pick preferred shifts for a specific day */}
       {modalDay && (
         <div className="ev-modal-overlay" onClick={closeModal}>
           <div className="ev-modal" onClick={(e) => e.stopPropagation()}>
