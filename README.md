@@ -26,9 +26,8 @@
   - [Local Development](#local-development)
 - [Environment Variables](#environment-variables)
 - [Testing](#testing)
-- [Authentication and Security](#authentication-and-security)
-  - [Authentication](#authentication)
-  - [Security Decisions](#security-decisions)
+- [Authentication](#authentication)
+- [Security Decisions](#security-decisions)
 - [Authors](#authors)
 
 ---
@@ -249,7 +248,7 @@ Fake component wrappers tested in isolation using [Testing Library](https://test
 </details>
 
 <details>
-<summary><strong>Gitub actions</strong> </summary>
+<summary><strong>GitHub actions</strong> </summary>
 
 <br>
 
@@ -260,11 +259,11 @@ Fake component wrappers tested in isolation using [Testing Library](https://test
 ---
 
 
-## Authentication and Security
+## Authentication
 
-### Authentication **Auth0** using the `express-openid-connect` library. When a user clicks "Continue with Auth0", they are redirected to the Auth0 login page. After logging in, Auth0 redirects back to the app and a session cookie is created automatically. Protected routes use the `requiresAuth()` middleware to check if the user is logged in — if not, the request is rejected with `401 Unauthorized`. The user's profile is read from `req.oidc.user` and returned to the frontend so it can show the right dashboard.
+Authentication is handled by **Auth0** using the `express-openid-connect` library. When a user clicks "Continue with Auth0", they are redirected to the Auth0 login page. After logging in, Auth0 redirects back to the app and a session cookie is created automatically. Protected routes use the `requiresAuth()` middleware to check if the user is logged in — if not, the request is rejected with `401 Unauthorized`. The user's profile is read from `req.oidc.user` and returned to the frontend so it can show the right dashboard.
 
-### Security Decisions
+## Security Decisions
 
 - **Secrets are stored in `.env`** and never committed to Git or baked into Docker images, to prevent unauthorized access.
 - **Protected routes return `401`** when the session is missing or expired, and **`403`** when a non-employer tries to access employer-only actions.
@@ -277,6 +276,16 @@ Fake component wrappers tested in isolation using [Testing Library](https://test
 ---
 
 ## Reflections
+
+**Docker** removed the "works on my machine" problem by running the backend, frontend, and database in containers that behave the same everywhere. It taught us how multi-service applications are structured in practice.
+
+**Testing** was more useful than expected. Unit tests caught edge cases early, integration tests verified real HTTP behaviour, and GitHub Actions ran everything automatically on every push.
+
+**Deployment** showed us that a working local setup is only half the job — Auth0 callback URLs, environment variables, and cookie flags only surface as problems in a real deployed environment.
+
+**Database and ORM** — Prisma made schema changes trackable through migrations and the seed script kept test data consistent across machines. Getting migrations to run at the right moment inside Docker took some trial and error.
+
+**Authentication with Auth0** was the most complex part. Understanding the OAuth 2.0 flow — the redirect, the callback, and the session cookie — was challenging at first, but it showed us the value of delegating security-critical work to a dedicated service.
 
 ---
 
