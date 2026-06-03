@@ -141,8 +141,6 @@ Both the backend and frontend use [Vitest](https://vitest.dev/) as the test runn
 
 The backend uses a fake Prisma client and mock bcrypt — no real database or Auth0 credentials are needed to run the tests.
 
----
-
 <details>
 <summary><strong>Backend — Unit Tests</strong> &nbsp;·&nbsp; <code>server/tests/unit/employees.test.js</code> &nbsp;·&nbsp; 25 tests</summary>
 
@@ -179,8 +177,6 @@ Pure helper functions tested in isolation — no database, no network, no Expres
 | `validateAvailabilityInput` | Returns `ok:false` when status is empty |
 
 </details>
-
----
 
 <details>
 <summary><strong>Backend — Integration Tests</strong> &nbsp;·&nbsp; <code>server/tests/integration/api.test.js</code> &nbsp;·&nbsp; 27 tests</summary>
@@ -220,8 +216,6 @@ Real HTTP requests sent to the Express app via [supertest](https://github.com/la
 | App bootstrap | `createApp()` starts without throwing | `200` on health check |
 
 </details>
-
----
 
 <details>
 <summary><strong>Frontend — Unit Tests</strong> &nbsp;·&nbsp; <code>client/tests/unit/components.test.jsx</code> &nbsp;·&nbsp; 17 tests</summary>
