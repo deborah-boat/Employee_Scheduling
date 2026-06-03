@@ -26,11 +26,7 @@
   - [Local Development](#local-development)
 - [Environment Variables](#environment-variables)
 - [Testing](#testing)
-  - [How to Run the Tests](#how-to-run-the-tests)
-  - [Backend — Unit Tests](#backend--unit-tests)
-  - [Backend — Integration Tests](#backend--integration-tests)
-  - [Frontend — Unit Tests](#frontend--unit-tests)
-- [Security](#security)
+- [Authentication and Security](#security)
 - [Authors](#authors)
 
 ---
@@ -217,6 +213,8 @@ Real HTTP requests sent to the Express app via [supertest](https://github.com/la
 | CORS preflight | `OPTIONS` request from frontend origin | `Access-Control-Allow-Origin` matches |
 | App bootstrap | `createApp()` starts without throwing | `200` on health check |
 
+![Frontend unit tests passing](client/src/assets/testclient.png)
+
 </details>
 
 <details>
@@ -248,16 +246,43 @@ Fake component wrappers tested in isolation using [Testing Library](https://test
 
 </details>
 
+details>
+<summary><strong>Gitub actions</strong> &nbsp;·&nbsp; <code>client/tests/unit/components.test.jsx</code> &nbsp;·&nbsp; 17 tests</summary>
+
+<br>
+
+![Github Actions](client/src/assets/githubactions.png)
+
+</details>
+
+
 ---
 
 
-## Security
+## Authentication and Security
 
-- `.env` files are excluded from Git via `.gitignore` and from Docker images via `.dockerignore`
-- Docker images never contain host `node_modules` — each image installs its own dependencies
-- Secrets are injected into containers at runtime via `docker-compose.yml` environment variables, never baked into images
-- Passwords are hashed with bcrypt before storage
-- All inputs are validated with Zod before reaching the database
+### Authentication
+
+Authentication is implemented using **Auth0** via the [`express-openid-connect`](https://github.com/auth0/express-openid-connect) library, which implements the **OAuth 2.0 Authorization Code Flow with OIDC**.
+
+When a user clicks **"Continue with Auth0"** on the login screen, the frontend calls `POST /api/auth/login`, which invokes `res.oidc.login()`. This redirects the user to the Auth0 hosted login page where they authenticate with their credentials. After a successful login, Auth0 redirects back to the `/callback` endpoint on the backend. The `express-openid-connect` middleware handles the token exchange automatically and establishes an **encrypted session cookie** on the browser.
+
+From that point on, every request from the frontend carries the session cookie automatically. Protected backend routes are guarded with the `requiresAuth()` middleware, also from `express-openid-connect`. This middleware checks `req.oidc.isAuthenticated()` — if the session is missing or expired, the request is rejected with `401 Unauthorized` before reaching the route handler. If the session is valid, the decoded user profile (`sub`, `email`, `name`) is available on `req.oidc.user`, allowing the route to serve the protected resource.
+
+The `/api/auth/session` endpoint reads `req.oidc.user` and returns the user's id, email, display name, and role to the frontend so the UI can render the correct view (employer or employee dashboard).
+
+### Security Decisions
+
+- **No secret API keys are committed to the repository.** All credentials (Auth0 client ID, client secret, session secret, database URL) are stored in a `.env` file, which is listed in `.gitignore` and `.dockerignore`. Exposing these keys would allow unauthorized access to the Auth0 tenant and the database.
+- **Protected routes return `401 Unauthorized` for unauthenticated requests** because the session cookie is either absent or invalid. This prevents unauthenticated users from reading or modifying protected data.
+- **Role-based access returns `403 Forbidden` for insufficient permissions.** Employer-only routes (registering employees, editing the schedule) check the `x-role` request header and reject requests from employees or unauthenticated callers before any database operation is attempted.
+- **CORS is configured to only allow requests from the frontend origin** (`CLIENT_ORIGIN` environment variable). This prevents unauthorized domains from making cross-origin requests to the API.
+- **Auth session state is stored in an encrypted server-side session cookie, not in `localStorage`.** Values in `localStorage` are accessible to any JavaScript running on the page and can be stolen in XSS attacks. Session cookies with `HttpOnly` and `Secure` flags are not accessible to client-side scripts.
+- **The session cookie uses `sameSite: 'None'` + `secure: true` in production (HTTPS)** and `sameSite: 'Lax'` in local development (HTTP). The `sameSite` attribute reduces the risk of CSRF attacks by controlling when the browser sends the cookie on cross-site requests.
+- **`credentials: true` is set in the CORS configuration** so that the browser includes the session cookie on authenticated cross-origin requests between the frontend and the backend.
+- **Passwords are hashed with `bcrypt`** before being stored in the database. Plain-text passwords are never persisted, so a database leak does not expose user credentials directly.
+- **All incoming request bodies are validated with Zod schemas** before any database operation. Invalid or malformed input is rejected with a `400 Bad Request` response, preventing unexpected data from reaching the database layer.
+- **Secrets are injected into containers at runtime** via `docker-compose.yml` environment variables and are never baked into Docker images, so published images do not contain credentials.
 
 ---
 
