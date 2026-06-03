@@ -120,7 +120,7 @@ Employee_Scheduling/
 
 | Step | Action | Command |
 |---|---|---|
-| 1 | Copy `.env.example` to `server/.env` and fill in your Auth0 credentials with  | — |
+| 1 | Copy `.env.example` to `server/.env` and fill in your Auth0 credentials  | — |
 | 2 | Start all services from the project root.<br>**Frontend:** http://localhost:5173<br>**Backend API:** http://localhost:4000<br>**PostgreSQL:** localhost:5433 | `docker compose up --build` |
 | 3 | Stop and remove volumes | `docker compose down -v` |
 
@@ -289,9 +289,9 @@ Authentication is handled by **Auth0** using the `express-openid-connect` librar
 
 **Docker** removed the "works on my machine" problem by running the backend, frontend, and database in containers that behave the same everywhere. It taught us how multi-service applications are structured in practice.
 
-**Testing** was more useful than expected. Unit tests caught edge cases early, integration tests verified real HTTP behaviour, and GitHub Actions ran everything automatically on every push.
+**Testing** was harder than expected because the tests had to work without a real database or Auth0 credentials, which meant learning how to mock dependencies. Once we got it working, having CI run every test on every push made deploying much less stressful.
 
-**Deployment** showed us that a working local setup is only half the job — Auth0 callback URLs, environment variables, and cookie flags only surface as problems in a real deployed environment.
+**Deployment** was the most detail-heavy part. Every piece has to be correct at the same time — the Render URL, the Vercel URL, the Auth0 callback URLs, and the cookie flags. Working across three platforms at once meant a misconfiguration in one could look like a bug in another, which taught us to check each layer separately.
 
 **Database and ORM** — Prisma made schema changes trackable through migrations and the seed script kept test data consistent across machines. Getting migrations to run at the right moment inside Docker took some trial and error.
 
