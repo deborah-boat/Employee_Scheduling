@@ -25,6 +25,11 @@
   - [Docker (recommended)](#docker-recommended)
   - [Local Development](#local-development)
 - [Environment Variables](#environment-variables)
+- [Testing](#testing)
+  - [How to Run the Tests](#how-to-run-the-tests)
+  - [Backend — Unit Tests](#backend--unit-tests)
+  - [Backend — Integration Tests](#backend--integration-tests)
+  - [Frontend — Unit Tests](#frontend--unit-tests)
 - [Security](#security)
 - [Authors](#authors)
 
@@ -120,6 +125,123 @@ Requires Node.js and a running PostgreSQL instance.
 |---|---|---|
 | Backend | `server/` | `npm install`<br>`npx prisma db push`<br>`npm run dev` — nodemon on port 4000 |
 | Frontend | `client/` | `npm install`<br>`npm run dev` — Vite dev server on port 5173 |
+
+---
+
+## Testing
+
+Both the backend and frontend use [Vitest](https://vitest.dev/) as the test runner.
+
+### How to Run the Tests
+
+| Part | Test types | Command |
+|------|------------|---------|
+| **Backend** | Unit + Integration | `cd server` then `npm test` |
+| **Frontend** | Unit | `cd client` then `npm test` |
+
+The backend uses a fake Prisma client and mock bcrypt — no real database or Auth0 credentials are needed to run the tests.
+
+---
+
+### Backend — Unit Tests
+
+`server/tests/unit/employees.test.js` — **25 tests**
+
+Pure helper functions tested in isolation — no database, no network, no Express.
+
+| Function | What it checks |
+|----------|----------------|
+| `normalizeEmail` | Lowercases an email that has uppercase letters |
+| `normalizeEmail` | Strips leading and trailing whitespace |
+| `isValidRole` | Accepts `"employee"` |
+| `isValidRole` | Accepts `"employer"` |
+| `isValidRole` | Accepts mixed case (normalizes before checking) |
+| `isValidRole` | Rejects an arbitrary string |
+| `isValidRole` | Rejects an empty string |
+| `parseId` | Parses a valid numeric string to an integer |
+| `parseId` | Returns `NaN` for a non-numeric string |
+| `parseId` | Returns `NaN` for an empty string |
+| `filterEmployeesByName` | Returns all employees when no name filter is provided |
+| `filterEmployeesByName` | Finds an employee by partial name (case-insensitive) |
+| `filterEmployeesByName` | Returns multiple employees when the search term matches several |
+| `filterEmployeesByName` | Returns an empty array when no employee matches |
+| `validateEmployeeInput` | Returns `ok:true` for valid name and email |
+| `validateEmployeeInput` | Returns `ok:false` when name is empty |
+| `validateEmployeeInput` | Returns `ok:false` when name is whitespace only |
+| `validateEmployeeInput` | Returns `ok:false` when email has no `@` symbol |
+| `validateEmployeeInput` | Returns `ok:false` when email is missing |
+| `validateAvailabilityInput` | Returns `ok:true` for a valid availability record |
+| `validateAvailabilityInput` | Accepts `shift_id` as a numeric string (coerces it) |
+| `validateAvailabilityInput` | Returns `ok:false` when date is missing |
+| `validateAvailabilityInput` | Returns `ok:false` when `shift_id` is zero |
+| `validateAvailabilityInput` | Returns `ok:false` when `shift_id` is not a number |
+| `validateAvailabilityInput` | Returns `ok:false` when status is empty |
+
+---
+
+### Backend — Integration Tests
+
+`server/tests/integration/api.test.js` — **27 tests**
+
+Real HTTP requests sent to the Express app via [supertest](https://github.com/ladjs/supertest).
+
+| Endpoint | Scenario | Expected result |
+|----------|----------|-----------------|
+| `GET /api/health` | Server is running | `200` + `{ status: "ok" }` |
+| `POST /api/login` | Missing required fields | `400` Bad Request |
+| `POST /api/login` | Role is not `"employee"` or `"employer"` | `400` Bad Request |
+| `POST /api/login` | User does not exist in the database | `401` Unauthorized |
+| `POST /api/login` | Password is wrong | `401` Unauthorized |
+| `POST /api/login` | Valid credentials | `200` + user info |
+| `GET /employees` | No auth required | `200` + array of employees |
+| `POST /employees` | `x-role` header is not `"employer"` | `403` Forbidden |
+| `POST /employees` | Body fails validation (missing email) | `400` Bad Request |
+| `POST /employees` | Valid input with employer role | `201` Created |
+| `DELETE /employees/:id` | `x-role` is not `"employer"` | `403` Forbidden |
+| `DELETE /employees/:id` | ID is not a valid number | `400` Bad Request |
+| `DELETE /employees/:id` | Valid employer + valid ID | `204` No Content |
+| `GET /availability/:id` | ID is not a valid number | `400` Bad Request |
+| `GET /availability/:id` | Valid employee ID | `200` + availability array |
+| `PUT /availability/:id` | ID is not a valid number | `400` Bad Request |
+| `PUT /availability/:id` | Body fails Zod validation (missing `shift_id`) | `400` Bad Request |
+| `PUT /availability/:id` | No existing record — creates new | `200` + created record |
+| `GET /schedule` | No auth required | `200` + array |
+| `PUT /schedule` | `x-role` is not `"employer"` | `403` Forbidden |
+| `PUT /schedule` | Body fails Zod validation (missing `shift_id`) | `400` Bad Request |
+| `PUT /schedule` | Valid shift assignment | `200` + assignment |
+| `DELETE /schedule` | `x-role` is not `"employer"` | `403` Forbidden |
+| `DELETE /schedule` | Shift instance does not exist | `204` No Content |
+| `DELETE /schedule` | Shift instance exists | `204` No Content |
+| CORS preflight | `OPTIONS` request from frontend origin | `Access-Control-Allow-Origin` matches |
+| App bootstrap | `createApp()` starts without throwing | `200` on health check |
+
+---
+
+### Frontend — Unit Tests
+
+`client/tests/unit/components.test.jsx` — **17 tests**
+
+Fake component wrappers tested in isolation using [Testing Library](https://testing-library.com/) with `jsdom`.
+
+| Component | What it checks |
+|-----------|----------------|
+| `LoginScreen` | Shows the employer subtitle when role is `"employer"` |
+| `LoginScreen` | Shows the employee subtitle when role is `"employee"` |
+| `LoginScreen` | Shows a validation error when submitted with empty fields |
+| `EmployeeList` | Shows "No employees found." when the list is empty |
+| `EmployeeList` | Renders each employee name and position |
+| `EmployeeList` | Shows the placeholder emoji when an employee has no profile picture |
+| `EmployeeList` | Shows the profile image when an employee has a picture |
+| `EmployerView` | Shows the Employees tab content by default |
+| `EmployerView` | Renders all four navigation tabs |
+| `EmployerView` | Switches to the Register employee tab when clicked |
+| `RegisterEmployeeForm` | Renders first name, last name, and email fields |
+| `RegisterEmployeeForm` | Does not submit when required name fields are empty |
+| `RegisterEmployeeForm` | Calls `onSubmit` and shows confirmation when fields are filled |
+| `App` (auth guard) | Shows the role-selection screen when no role is set |
+| `App` (auth guard) | Shows the employer dashboard when role is `"employer"` |
+| `App` (auth guard) | Shows the employee dashboard when role is `"employee"` |
+| `App` (auth guard) | Hides the employer dashboard when no role is set |
 
 ---
 
