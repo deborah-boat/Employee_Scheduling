@@ -14,6 +14,7 @@
 
 ## Table of Contents
 
+- [Deployed URLs](#deployed-urls)
 - [Features](#features)
   - [Employer](#employer)
   - [Employee](#employee)
@@ -23,12 +24,21 @@
   - [Database](#database)
   - [Infrastructure](#infrastructure)
 - [Project Structure](#project-structure)
-- [Running the Project](#running-the-project)
-  - [Docker (recommended)](#docker-recommended)
-  - [Local Development](#local-development)
-- [Environment Variables](#environment-variables)
-- [Security](#security)
+- [How to Run Locally](#how-to-run-locally)
+- [How to Run with Docker](#how-to-run-with-docker)
+- [Running Tests](#running-tests)
+- [Security Checklist](#security-checklist)
+- [Reflections](#reflections)
 - [Authors](#authors)
+
+---
+
+## Deployed URLs
+
+| Service | URL |
+|---|---|
+| **Frontend** | [https://employeeschedulingsecond.vercel.app](https://employeeschedulingsecond.vercel.app/) |
+| **Backend** | [https://employee-scheduling-ilbu.onrender.com](https://employee-scheduling-ilbu.onrender.com) |
 
 ---
 

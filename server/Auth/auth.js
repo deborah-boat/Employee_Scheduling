@@ -11,14 +11,15 @@ if (!sessionSecret) {
   throw new Error("Missing AUTH0_SECRET (or SECRET) environment variable");
 }
 
-const isProduction = process.env.NODE_ENV === 'production';
+const resolvedBaseURL = process.env.AUTH0_BASE_URL || `http://localhost:${port}`;
+const isSecure = resolvedBaseURL.startsWith('https://');
 
 const config = {
   authRequired: false,
   auth0Logout: true,
   idpLogout: false,
   secret: sessionSecret,
-  baseURL: process.env.AUTH0_BASE_URL || `http://localhost:${port}`,
+  baseURL: resolvedBaseURL,
   clientID: process.env.AUTH0_CLIENT_ID,
   clientSecret: process.env.AUTH0_CLIENT_SECRET,
   issuerBaseURL:
@@ -36,8 +37,8 @@ const config = {
   errorOnRequiredAuth: true, // Returns 401 instead of redirecting on protected routes
   session: {
     cookie: {
-      sameSite: isProduction ? 'None' : 'Lax',
-      secure: isProduction,
+      sameSite: isSecure ? 'None' : 'Lax',
+      secure: isSecure,
     }
   },
 };

@@ -1,7 +1,8 @@
 const express = require("express");
 const { logger } = require("../logger");
 
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
+const rawClientOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5173";
+const CLIENT_ORIGIN = rawClientOrigin.startsWith("http") ? rawClientOrigin : `https://${rawClientOrigin}`;
 
 function normalizeRole(value) {
   const role = String(value || "").toLowerCase();

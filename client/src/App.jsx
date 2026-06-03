@@ -10,7 +10,6 @@ import EmployerView from "./components/EmployerView";
 import EmployeeView from "./components/EmployeeView";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
-const AUTH_STORAGE_KEY = "employee-auth";
 const SCHEDULE_STORAGE_KEY = "employee-schedule";
 
 // Inverse of SHIFT_IDS: { 1: "morning", 2: "afternoon", 3: "night" }
@@ -28,30 +27,9 @@ function getStoredSchedule() {
 
 const apiUrl = (path) => `${API_BASE_URL}${path}`;
 
-function getStoredAuth() {
-  try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) return { role: null, user: null };
-
-    const parsed = JSON.parse(raw);
-    if (!parsed?.user || !parsed?.role) {
-      return { role: null, user: null };
-    }
-
-    return {
-      role: parsed.role,
-      user: parsed.user
-    };
-  } catch {
-    return { role: null, user: null };
-  }
-}
-
 export default function App() {
-  const storedAuth = getStoredAuth();
-
-  const [role, setRole] = useState(storedAuth.role);
-  const [user, setUser] = useState(storedAuth.user);
+  const [role, setRole] = useState(null);
+  const [user, setUser] = useState(null);
   const [employees, setEmployees] = useState(MOCK_EMPLOYEES);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(1);
 
@@ -73,8 +51,8 @@ export default function App() {
   useEffect(() => {
     const restoreAuthSession = async () => {
       // Skip session restore if the user explicitly logged out
-      if (localStorage.getItem("logged_out") === "true") {
-        localStorage.removeItem("logged_out");
+      if (sessionStorage.getItem("logged_out") === "true") {
+        sessionStorage.removeItem("logged_out");
         setRole(null);
         setUser(null);
         return;
@@ -82,15 +60,14 @@ export default function App() {
 
       const params = new URLSearchParams(window.location.search);
       const requestedRole = params.get("role");
-      const storedRole = storedAuth.role;
-      const roleFromUrlOrStorage =
+      const roleFromUrl =
         requestedRole === "employer" || requestedRole === "employee"
           ? requestedRole
-          : storedRole;
+          : null;
 
       try {
         const response = await fetch(
-          `${apiUrl("/api/auth/session")}${roleFromUrlOrStorage ? `?role=${encodeURIComponent(roleFromUrlOrStorage)}` : ""}`,
+          `${apiUrl("/api/auth/session")}${roleFromUrl ? `?role=${encodeURIComponent(roleFromUrl)}` : ""}`,
           {
           credentials: "include"
         }
@@ -99,41 +76,31 @@ export default function App() {
         if (!response.ok) {
           setRole(null);
           setUser(null);
-          localStorage.removeItem(AUTH_STORAGE_KEY);
           window.history.replaceState({}, "", "/");
           return;
         }
 
         const data = await response.json();
-        const resolvedRole = data.user?.role || roleFromUrlOrStorage || null;
+        const resolvedRole = data.user?.role || roleFromUrl || null;
         const resolvedUser = {
           id: data.user?.id,
           username: data.user?.displayName || data.user?.email || "User",
           email: data.user?.email || "",
-          role: resolvedRole,
-          token: "oidc-session"
+          role: resolvedRole
         };
 
         setRole(resolvedRole);
         setUser(resolvedUser);
-        localStorage.setItem(
-          AUTH_STORAGE_KEY,
-          JSON.stringify({
-            role: resolvedRole,
-            user: resolvedUser
-          })
-        );
         window.history.replaceState({}, "", "/");
       } catch {
         setRole(null);
         setUser(null);
-        localStorage.removeItem(AUTH_STORAGE_KEY);
         window.history.replaceState({}, "", "/");
       }
     };
 
     restoreAuthSession();
-  }, [API_BASE_URL, storedAuth.role]);
+  }, [API_BASE_URL]);
 
   // Reference Monday for the current week — used to compute real dates from day names
   const [weekStartDate] = useState(() => {
@@ -152,7 +119,7 @@ export default function App() {
     await Promise.all(
       employees.map(async (emp) => {
         try {
-          const res = await fetch(apiUrl(`/availability/${emp.id}`));
+          const res = await fetch(apiUrl(`/availability/${emp.id}`), { credentials: "include" });
           if (!res.ok) return;
           const records = await res.json();
           records.forEach((record) => {
@@ -286,6 +253,7 @@ export default function App() {
       await fetch(`${API_BASE_URL}/schedule`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json", "x-role": user?.role || "employer" },
+        credentials: "include",
         body: JSON.stringify({ employeeId, date: dayToDate(day), shift_id: SHIFT_IDS[shift] })
       });
     } catch {
@@ -309,6 +277,7 @@ export default function App() {
       await fetch(`${API_BASE_URL}/schedule`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "x-role": user?.role || "employer" },
+        credentials: "include",
         body: JSON.stringify({ employeeId, date: dayToDate(day), shift_id: SHIFT_IDS[shift] })
       });
     } catch {
@@ -348,6 +317,7 @@ export default function App() {
       await fetch(apiUrl(`/availability/${employeeId}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           date: dayToDate(day),
           shift_id: SHIFT_IDS[shift],
@@ -449,28 +419,11 @@ export default function App() {
                 <button 
                   className="topbar__dropdown-logout"
                   onClick={async () => {
-                    // If the session is an OIDC session, perform a redirect logout so Auth0 can end the session.
-                    if (user?.token === "oidc-session") {
-                      localStorage.removeItem(AUTH_STORAGE_KEY);
-                      localStorage.setItem("logged_out", "true");
-                      setUser(null);
-                      setRole(null);
-                      window.location.assign(apiUrl("/api/auth/logout"));
-                      return;
-                    }
-
-                    // For demo/local sessions call the API logout and then clear client state.
-                    try {
-                      await fetch(apiUrl("/api/auth/logout"), { method: "POST", credentials: "include" });
-                    } catch {
-                      // ignore network errors — still clear local state
-                    }
-
-                    localStorage.removeItem(AUTH_STORAGE_KEY);
-                    localStorage.setItem("logged_out", "true");
+                    // Perform a redirect logout so Auth0 can end the session.
+                    sessionStorage.setItem("logged_out", "true");
                     setUser(null);
                     setRole(null);
-                    window.location.assign("/");
+                    window.location.assign(apiUrl("/api/auth/logout"));
                   }}
                 >
                   <svg className="logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
