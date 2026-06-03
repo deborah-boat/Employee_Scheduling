@@ -21,10 +21,10 @@
   - [Employee](#employee)
 - [Technologies & Tools](#technologies--tools)
 - [Project Structure](#project-structure)
+- [Deployment](#deployment)
 - [Running the Project](#running-the-project)
   - [Docker (recommended)](#docker-recommended)
   - [Local Development](#local-development)
-- [Environment Variables](#environment-variables)
 - [Testing](#testing)
 - [Authentication](#authentication)
 - [Security Decisions](#security-decisions)
@@ -104,13 +104,23 @@ Employee_Scheduling/
 
 ---
 
+## Deployment
+
+| Service | Platform | URL |
+|---|---|---|
+| Frontend | Vercel | https://employeeschedulingsecond.vercel.app |
+| Backend API | Render | https://employee-scheduling-ilbu.onrender.com |
+| Database | Render PostgreSQL | — (internal, not publicly exposed) |
+
+---
+
 ## Running the Project
 
 ### Docker (recommended)
 
 | Step | Action | Command |
 |---|---|---|
-| 1 | Copy `.env.example` to `server/.env` and fill in your Auth0 credentials (see [Environment Variables](#environment-variables)) | — |
+| 1 | Copy `.env.example` to `server/.env` and fill in your Auth0 credentials with  | — |
 | 2 | Start all services from the project root.<br>**Frontend:** http://localhost:5173<br>**Backend API:** http://localhost:4000<br>**PostgreSQL:** localhost:5433 | `docker compose up --build` |
 | 3 | Stop and remove volumes | `docker compose down -v` |
 
