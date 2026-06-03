@@ -14,31 +14,17 @@
 
 ## Table of Contents
 
-- [Deployed URLs](#deployed-urls)
 - [Features](#features)
   - [Employer](#employer)
   - [Employee](#employee)
 - [Technologies & Tools](#technologies--tools)
-  - [Frontend](#frontend)
-  - [Backend](#backend)
-  - [Database](#database)
-  - [Infrastructure](#infrastructure)
 - [Project Structure](#project-structure)
-- [How to Run Locally](#how-to-run-locally)
-- [How to Run with Docker](#how-to-run-with-docker)
-- [Running Tests](#running-tests)
-- [Security Checklist](#security-checklist)
-- [Reflections](#reflections)
+- [Running the Project](#running-the-project)
+  - [Docker (recommended)](#docker-recommended)
+  - [Local Development](#local-development)
+- [Environment Variables](#environment-variables)
+- [Security](#security)
 - [Authors](#authors)
-
----
-
-## Deployed URLs
-
-| Service | URL |
-|---|---|
-| **Frontend** | [https://employeeschedulingsecond.vercel.app](https://employeeschedulingsecond.vercel.app/) |
-| **Backend** | [https://employee-scheduling-ilbu.onrender.com](https://employee-scheduling-ilbu.onrender.com) |
 
 ---
 
@@ -61,43 +47,26 @@
 
 ## Technologies & Tools
 
-### Frontend
-
-| Technology | Purpose |
-|---|---|
-| [React 19](https://react.dev/) | UI component library |
-| [Vite 8](https://vitejs.dev/) | Build tool and dev server |
-| [ESLint](https://eslint.org/) | Code linting |
-| [Vitest](https://vitest.dev/) | Unit and component testing |
-| [Testing Library](https://testing-library.com/) | React component testing utilities |
-
-### Backend
-
-| Technology | Purpose |
-|---|---|
-| [Node.js](https://nodejs.org/) | Runtime environment |
-| [Express 5](https://expressjs.com/) | HTTP server and routing |
-| [express-openid-connect](https://github.com/auth0/express-openid-connect) | Auth0 OIDC authentication middleware |
-| [bcrypt](https://github.com/kelektiv/node.bcrypt.js) | Password hashing |
-| [Zod](https://zod.dev/) | Schema validation |
-| [Winston](https://github.com/winstonjs/winston) | Structured server-side logging |
-| [dotenv](https://github.com/motdotla/dotenv) | Environment variable management |
-| [Vitest](https://vitest.dev/) | Unit and integration testing |
-
-### Database
-
-| Technology | Purpose |
-|---|---|
-| [PostgreSQL](https://www.postgresql.org/) | Relational database |
-| [Prisma 6](https://www.prisma.io/) | ORM and schema migrations |
-
-### Infrastructure
-
-| Technology | Purpose |
-|---|---|
-| [Docker](https://www.docker.com/) | Containerisation |
-| [Docker Compose](https://docs.docker.com/compose/) | Multi-service orchestration |
-| [Nginx](https://nginx.org/) | Serves the built frontend in production |
+| Category | Technology | Purpose |
+|---|---|---|
+| Frontend | [React 19](https://react.dev/) | UI component library |
+| Frontend | [Vite 8](https://vitejs.dev/) | Build tool and dev server |
+| Frontend | [ESLint](https://eslint.org/) | Code linting |
+| Frontend | [Vitest](https://vitest.dev/) | Unit and component testing |
+| Frontend | [Testing Library](https://testing-library.com/) | React component testing utilities |
+| Backend | [Node.js](https://nodejs.org/) | Runtime environment |
+| Backend | [Express 5](https://expressjs.com/) | HTTP server and routing |
+| Backend | [express-openid-connect](https://github.com/auth0/express-openid-connect) | Auth0 OIDC authentication middleware |
+| Backend | [bcrypt](https://github.com/kelektiv/node.bcrypt.js) | Password hashing |
+| Backend | [Zod](https://zod.dev/) | Schema validation |
+| Backend | [Winston](https://github.com/winstonjs/winston) | Structured server-side logging |
+| Backend | [dotenv](https://github.com/motdotla/dotenv) | Environment variable management |
+| Backend | [Vitest](https://vitest.dev/) | Unit and integration testing |
+| Database | [PostgreSQL](https://www.postgresql.org/) | Relational database |
+| Database | [Prisma 6](https://www.prisma.io/) | ORM and schema migrations |
+| Infrastructure | [Docker](https://www.docker.com/) | Containerisation |
+| Infrastructure | [Docker Compose](https://docs.docker.com/compose/) | Multi-service orchestration |
+| Infrastructure | [Nginx](https://nginx.org/) | Serves the built frontend in production |
 
 ---
 
