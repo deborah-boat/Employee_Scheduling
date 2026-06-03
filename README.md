@@ -143,9 +143,10 @@ The backend uses a fake Prisma client and mock bcrypt — no real database or Au
 
 ---
 
-### Backend — Unit Tests
+<details>
+<summary><strong>Backend — Unit Tests</strong> &nbsp;·&nbsp; <code>server/tests/unit/employees.test.js</code> &nbsp;·&nbsp; 25 tests</summary>
 
-`server/tests/unit/employees.test.js` — **25 tests**
+<br>
 
 Pure helper functions tested in isolation — no database, no network, no Express.
 
@@ -177,11 +178,14 @@ Pure helper functions tested in isolation — no database, no network, no Expres
 | `validateAvailabilityInput` | Returns `ok:false` when `shift_id` is not a number |
 | `validateAvailabilityInput` | Returns `ok:false` when status is empty |
 
+</details>
+
 ---
 
-### Backend — Integration Tests
+<details>
+<summary><strong>Backend — Integration Tests</strong> &nbsp;·&nbsp; <code>server/tests/integration/api.test.js</code> &nbsp;·&nbsp; 27 tests</summary>
 
-`server/tests/integration/api.test.js` — **27 tests**
+<br>
 
 Real HTTP requests sent to the Express app via [supertest](https://github.com/ladjs/supertest).
 
@@ -215,11 +219,14 @@ Real HTTP requests sent to the Express app via [supertest](https://github.com/la
 | CORS preflight | `OPTIONS` request from frontend origin | `Access-Control-Allow-Origin` matches |
 | App bootstrap | `createApp()` starts without throwing | `200` on health check |
 
+</details>
+
 ---
 
-### Frontend — Unit Tests
+<details>
+<summary><strong>Frontend — Unit Tests</strong> &nbsp;·&nbsp; <code>client/tests/unit/components.test.jsx</code> &nbsp;·&nbsp; 17 tests</summary>
 
-`client/tests/unit/components.test.jsx` — **17 tests**
+<br>
 
 Fake component wrappers tested in isolation using [Testing Library](https://testing-library.com/) with `jsdom`.
 
@@ -242,6 +249,8 @@ Fake component wrappers tested in isolation using [Testing Library](https://test
 | `App` (auth guard) | Shows the employer dashboard when role is `"employer"` |
 | `App` (auth guard) | Shows the employee dashboard when role is `"employee"` |
 | `App` (auth guard) | Hides the employer dashboard when no role is set |
+
+</details>
 
 ---
 
