@@ -176,6 +176,8 @@ Pure helper functions tested in isolation — no database, no network, no Expres
 | `validateAvailabilityInput` | Returns `ok:false` when `shift_id` is not a number |
 | `validateAvailabilityInput` | Returns `ok:false` when status is empty |
 
+![Backend unit tests passing](client/src/assets/testserver.png)
+
 </details>
 
 <details>
