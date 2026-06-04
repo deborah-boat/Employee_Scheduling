@@ -93,8 +93,8 @@ function getDetailStatus(availabilityByDay = {}) {
 export default function WorkSchedule({ employees, schedule, availability }) {
   const [detailEmployee, setDetailEmployee] = useState(null);
   const dateInputRef = useRef(null);
-  // Start the calendar on April 1, 2026 by default
-  const [weekStartDate, setWeekStartDate] = useState(() => new Date(2026, 3, 1));
+  // Start the calendar on the current date by default
+  const [weekStartDate, setWeekStartDate] = useState(() => new Date());
 
   // Build the array of 7 day objects for the current week
   const weekDays = useMemo(() => {
